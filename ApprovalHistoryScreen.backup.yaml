@@ -1,0 +1,746 @@
+Screens:
+  ApprovalHistoryScreen:
+    Properties:
+      Fill: =Colors.BackgroundLight
+      OnVisible: |
+        =ClearCollect(colApprovalHistory,
+          {Id: 1, RequestId: 1, RequestCode: "YC-001", EmployeeName: "Nguyễn Văn An", CardType: "Standard", 
+           RequestDate: Date(2024, 1, 15), Status: "Approved", ApprovalSteps: [
+             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 16), Status: "Approved", Comments: "Đồng ý cấp thẻ tên cho nhân viên"},
+             {Step: 2, ApproverRole: "HR", ApproverName: "Lê Văn Cường", ApprovalDate: Date(2024, 1, 18), Status: "Approved", Comments: "Thông tin hợp lệ, chuyển in thẻ"}
+           ],
+           Department: "Phòng Công nghệ thông tin", Priority: "Normal", CurrentStep: 2, TotalSteps: 2},
+          {Id: 2, RequestId: 2, RequestCode: "YC-002", EmployeeName: "Nguyễn Văn An", CardType: "Executive", 
+           RequestDate: Date(2024, 1, 10), Status: "PendingManagerApproval", ApprovalSteps: [
+             {Step: 1, ApproverRole: "Manager", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+           ],
+           Department: "Phòng Công nghệ thông tin", Priority: "High", CurrentStep: 1, TotalSteps: 2},
+          {Id: 3, RequestId: 3, RequestCode: "YC-003", EmployeeName: "Nguyễn Văn An", CardType: "Temporary", 
+           RequestDate: Date(2024, 1, 5), Status: "Rejected", ApprovalSteps: [
+             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 8), Status: "Rejected", Comments: "Không cần thiết cho dự án ngắn hạn"}
+           ],
+           Department: "Phòng Công nghệ thông tin", Priority: "Low", CurrentStep: 1, TotalSteps: 2},
+          {Id: 4, RequestId: 4, RequestCode: "YC-004", EmployeeName: "Phạm Thị Dung", CardType: "Standard", 
+           RequestDate: Date(2024, 1, 20), Status: "PendingHRApproval", ApprovalSteps: [
+             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 22), Status: "Approved", Comments: "Nhân viên mới, cần thẻ tên"},
+             {Step: 2, ApproverRole: "HR", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+           ],
+           Department: "Phòng Marketing", Priority: "Normal", CurrentStep: 2, TotalSteps: 2}
+        );
+        Set(varCurrentUser, {FullName: "Trần Thị Bình", Role: "Manager", Department: "Phòng Công nghệ thông tin"});
+        Set(varSelectedApproval, Blank());
+        Set(varShowApprovalDetails, false);
+        Set(varFilterStatus, "All");
+        Set(varFilterPriority, "All");
+        Set(varDateFrom, Blank());
+        Set(varDateTo, Blank());
+        Set(varSearchEmployee, "");
+        UpdateContext({
+          summaryStats: {
+            TotalRequests: CountRows(colApprovalHistory),
+            PendingApprovals: CountRows(Filter(colApprovalHistory, Status in ["PendingManagerApproval", "PendingHRApproval"])),
+            ApprovedRequests: CountRows(Filter(colApprovalHistory, Status = "Approved")),
+            RejectedRequests: CountRows(Filter(colApprovalHistory, Status = "Rejected"))
+          }
+        })
+    Children:
+      - Main.Content.Container:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =Colors.BackgroundLight
+            Height: =Parent.Height - Styles.Header.Height
+            Width: =Parent.Width - Styles.Navigation.Width
+            X: =Styles.Navigation.Width
+            Y: =Styles.Header.Height
+          Children:
+            - Page.Header.Section:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.12
+                  Width: =Parent.Width
+                Children:
+                  - Page.Title:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        FontWeight: =FontWeight.Bold
+                        Height: =Parent.Height * 0.35
+                        Size: =FontSizes.XLarge
+                        Text: ="Lịch sử phê duyệt"
+                        Width: =Parent.Width * 0.5
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.15
+                  - Page.Subtitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextMuted
+                        Height: =Parent.Height * 0.35
+                        Size: =FontSizes.Base
+                        Text: ="Theo dõi và quản lý quá trình phê duyệt yêu cầu thẻ tên"
+                        Width: =Parent.Width * 0.5
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.5
+            - Summary.Stats.Section:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.BackgroundLight
+                  Height: =Parent.Height * 0.18
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.12
+                Children:
+                  - Total.Requests.Card:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Primary
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =true
+                        IsLoading: =false
+                        Title: ="Tổng yêu cầu"
+                        Value: =Text(summaryStats.TotalRequests)
+                        ValueColor: =Colors.Primary
+                        Width: =Parent.Width * 0.22
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.1
+                  - Pending.Approvals.Card:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Warning
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =true
+                        IsLoading: =false
+                        Title: ="Chờ phê duyệt"
+                        Value: =Text(summaryStats.PendingApprovals)
+                        ValueColor: =Colors.Warning
+                        Width: =Parent.Width * 0.22
+                        X: =Parent.Width * 0.27
+                        Y: =Parent.Height * 0.1
+                  - Approved.Requests.Card:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Success
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =true
+                        IsLoading: =false
+                        Title: ="Đã phê duyệt"
+                        Value: =Text(summaryStats.ApprovedRequests)
+                        ValueColor: =Colors.Success
+                        Width: =Parent.Width * 0.22
+                        X: =Parent.Width * 0.51
+                        Y: =Parent.Height * 0.1
+                  - Rejected.Requests.Card:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Error
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =true
+                        IsLoading: =false
+                        Title: ="Bị từ chối"
+                        Value: =Text(summaryStats.RejectedRequests)
+                        ValueColor: =Colors.Error
+                        Width: =Parent.Width * 0.22
+                        X: =Parent.Width * 0.75
+                        Y: =Parent.Height * 0.1
+            - Filters.Section:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.12
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.3
+                Children:
+                  - Filters.Title:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        FontWeight: =FontWeight.Bold
+                        Height: =Parent.Height * 0.3
+                        Size: =FontSizes.Medium
+                        Text: ="Bộ lọc"
+                        Width: =Parent.Width * 0.2
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.1
+                  - Status.Filter:
+                      Control: DropDown@0.0.45
+                      Properties:
+                        BorderColor: =Colors.Border
+                        DefaultSelectedItems: |
+                          =Table({Name: "Tất cả", Value: "All"})
+                        Fill: =Colors.White
+                        Height: =Styles.Input.Height
+                        Items: |
+                          =Table(
+                          {Name: "Tất cả", Value: "All"},
+                          {Name: "Chờ phê duyệt", Value: "Pending"},
+                          {Name: "Đã phê duyệt", Value: "Approved"},
+                          {Name: "Bị từ chối", Value: "Rejected"}
+                          )
+                        OnChange: |
+                          =Set(varFilterStatus, Self.Selected.Result.Value)
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.5
+                  - Priority.Filter:
+                      Control: DropDown@0.0.45
+                      Properties:
+                        BorderColor: =Colors.Border
+                        DefaultSelectedItems: |
+                          =Table({Name: "Tất cả", Value: "All"})
+                        Fill: =Colors.White
+                        Height: =Styles.Input.Height
+                        Items: |
+                          =Table(
+                          {Name: "Tất cả", Value: "All"},
+                          {Name: "Cao", Value: "High"},
+                          {Name: "Thường", Value: "Normal"},
+                          {Name: "Thấp", Value: "Low"}
+                          )
+                        OnChange: |
+                          =Set(varFilterPriority, Self.Selected.Result.Value)
+                        Width: =Parent.Width * 0.12
+                        X: =Parent.Width * 0.2
+                        Y: =Parent.Height * 0.5
+                  - Employee.Search:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =Colors.Border
+                        Color: =Colors.TextPrimary
+                        Default: =""
+                        Fill: =Colors.White
+                        FocusedBorderColor: =Colors.Primary
+                        Height: =Styles.Input.Height
+                        HintText: ="Tìm kiếm nhân viên..."
+                        OnChange: |
+                          =Set(varSearchEmployee, Self.Text)
+                        Size: =FontSizes.Small
+                        Width: =Parent.Width * 0.2
+                        X: =Parent.Width * 0.34
+                        Y: =Parent.Height * 0.5
+                  - Date.From.Label:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        Height: =Parent.Height * 0.25
+                        Size: =FontSizes.Small
+                        Text: ="Từ ngày:"
+                        Width: =Parent.Width * 0.08
+                        X: =Parent.Width * 0.56
+                        Y: =Parent.Height * 0.2
+                  - Date.From.Input:
+                      Control: Classic/DatePicker@2.6.0
+                      Properties:
+                        BorderColor: =Colors.Border
+                        DefaultDate: =Blank()
+                        Fill: =Colors.White
+                        Height: =Styles.Input.Height
+                        OnChange: |
+                          =Set(varDateFrom, Self.SelectedDate)
+                        Size: =FontSizes.Small
+                        Width: =Parent.Width * 0.12
+                        X: =Parent.Width * 0.56
+                        Y: =Parent.Height * 0.5
+                  - Date.To.Label:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        Height: =Parent.Height * 0.25
+                        Size: =FontSizes.Small
+                        Text: ="Đến ngày:"
+                        Width: =Parent.Width * 0.08
+                        X: =Parent.Width * 0.7
+                        Y: =Parent.Height * 0.2
+                  - Date.To.Input:
+                      Control: Classic/DatePicker@2.6.0
+                      Properties:
+                        BorderColor: =Colors.Border
+                        DefaultDate: =Blank()
+                        Fill: =Colors.White
+                        Height: =Styles.Input.Height
+                        OnChange: |
+                          =Set(varDateTo, Self.SelectedDate)
+                        Size: =FontSizes.Small
+                        Width: =Parent.Width * 0.12
+                        X: =Parent.Width * 0.7
+                        Y: =Parent.Height * 0.5
+                  - Clear.Filters.Button:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Colors.Border
+                        Color: =Styles.Button.Secondary.Color
+                        Fill: =Styles.Button.Secondary.Fill
+                        Height: =Styles.Input.Height
+                        HoverFill: =Styles.Button.Secondary.HoverFill
+                        OnSelect: |
+                          =Reset('Status.Filter');
+                          Reset('Priority.Filter');
+                          Reset('Employee.Search');
+                          Reset('Date.From.Input');
+                          Reset('Date.To.Input');
+                          Set(varFilterStatus, "All");
+                          Set(varFilterPriority, "All");
+                          Set(varSearchEmployee, "");
+                          Set(varDateFrom, Blank());
+                          Set(varDateTo, Blank())
+                        Size: =FontSizes.Small
+                        Text: ="Xóa bộ lọc"
+                        Width: =Parent.Width * 0.12
+                        X: =Parent.Width * 0.85
+                        Y: =Parent.Height * 0.5
+                  - Clear.Filters.Button_2:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Colors.Border
+                        Color: =Styles.Button.Secondary.Color
+                        Fill: =Styles.Button.Secondary.Fill
+                        Height: =Styles.Input.Height
+                        HoverFill: =Styles.Button.Secondary.HoverFill
+                        OnSelect: |
+                          =Reset('Status.Filter');
+                          Reset('Priority.Filter');
+                          Reset('Employee.Search');
+                          Reset('Date.From.Input');
+                          Reset('Date.To.Input');
+                          Set(varFilterStatus, "All");
+                          Set(varFilterPriority, "All");
+                          Set(varSearchEmployee, "");
+                          Set(varDateFrom, Blank());
+                          Set(varDateTo, Blank())
+                        Size: =FontSizes.Small
+                        Text: ="Xóa bộ lọc"
+                        Width: =Parent.Width * 0.12
+                        X: =Parent.Width * 0.85
+                        Y: =Parent.Height * 0.5
+            - Approval.History.List.Section:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.BackgroundLight
+                  Height: =Parent.Height * 0.58
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.42
+                Children:
+                  - History.Section.Title:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        FontWeight: =FontWeight.Bold
+                        Height: =Parent.Height * 0.08
+                        Size: =FontSizes.Large
+                        Text: ="Danh sách lịch sử phê duyệt"
+                        Width: =Parent.Width * 0.5
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.02
+                  - History.Data.Container:
+                      Control: GroupContainer@1.3.0
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =Parent.Height * 0.86
+                        Width: =Parent.Width * 0.94
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.12
+                      Children:
+                        - History.Table.Header:
+                            Control: GroupContainer@1.3.0
+                            Variant: ManualLayout
+                            Properties:
+                              Fill: =Colors.BackgroundLight
+                              Height: =Parent.Height * 0.08
+                              Width: =Parent.Width
+                            Children:
+                              - Header.RequestCode:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Mã yêu cầu"
+                                    Width: =Parent.Width * 0.12
+                                    X: =Parent.Width * 0.02
+                              - Header.Employee:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Nhân viên"
+                                    Width: =Parent.Width * 0.18
+                                    X: =Parent.Width * 0.14
+                              - Header.CardType:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Loại thẻ"
+                                    Width: =Parent.Width * 0.12
+                                    X: =Parent.Width * 0.32
+                              - Header.RequestDate:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Ngày tạo"
+                                    Width: =Parent.Width * 0.12
+                                    X: =Parent.Width * 0.44
+                              - Header.Priority:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Ưu tiên"
+                                    Width: =Parent.Width * 0.1
+                                    X: =Parent.Width * 0.56
+                              - Header.Status:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Trạng thái"
+                                    Width: =Parent.Width * 0.15
+                                    X: =Parent.Width * 0.66
+                              - Header.Actions:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Center
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height
+                                    Size: =FontSizes.Small
+                                    Text: ="Thao tác"
+                                    Width: =Parent.Width * 0.17
+                                    X: =Parent.Width * 0.81
+      - Approval.Details.Modal.Overlay:
+          Control: Rectangle@2.3.0
+          Properties:
+            Fill: =Styles.Modal.Overlay
+            Height: =Parent.Height
+            OnSelect: |
+              =Set(varShowApprovalDetails, false)
+            Visible: =varShowApprovalDetails
+            Width: =Parent.Width
+      - Approval.Details.Modal:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =Colors.White
+            Height: =Parent.Height * 0.8
+            Visible: =varShowApprovalDetails
+            Width: =Parent.Width * 0.7
+            X: =If(varShowApprovalDetails, (Parent.Width - Parent.Width * 0.7) / 2, -Parent.Width)
+            Y: =If(varShowApprovalDetails, (Parent.Height - Parent.Height * 0.8) / 2, -Parent.Height)
+          Children:
+            - Details.Modal.Header:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.Primary
+                  Height: =Parent.Height * 0.1
+                  Width: =Parent.Width
+                Children:
+                  - Details.Modal.Title:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =Colors.White
+                        FontWeight: =FontWeight.Bold
+                        Height: =Parent.Height
+                        Size: =FontSizes.Large
+                        Text: ="Chi tiết lịch sử phê duyệt"
+                        Width: =Parent.Width * 0.8
+                        X: =Parent.Width * 0.04
+                  - Details.Modal.Close.Button:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Colors.White
+                        Color: =Colors.White
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Height: =Parent.Height * 0.6
+                        OnSelect: |
+                          =Set(varShowApprovalDetails, false)
+                        Size: =FontSizes.Large
+                        Text: ="×"
+                        Width: =Parent.Height * 0.6
+                        X: =Parent.Width * 0.9
+                        Y: =Parent.Height * 0.2
+            - Details.Modal.Content:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.9
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.1
+                Children:
+                  - Request.Info.Section:
+                      Control: GroupContainer@1.3.0
+                      Variant: ManualLayout
+                      Properties:
+                        BorderColor: =Colors.BorderLight
+                        BorderThickness: =1
+                        Fill: =Colors.BackgroundLight
+                        Height: =Parent.Height * 0.25
+                        Width: =Parent.Width * 0.94
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.02
+                      Children:
+                        - Info.Section.Title:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.2
+                              Size: =FontSizes.Medium
+                              Text: ="Thông tin yêu cầu"
+                              Width: =Parent.Width * 0.4
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.05
+                        - Request.Code.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: |
+                                =Concatenate("Mã yêu cầu:", varSelectedApproval.RequestCode)
+                              Width: =Parent.Width * 0.23
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.3
+                        - Employee.Name.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Nhân viên:", varSelectedApproval.EmployeeName)
+                              Width: =Parent.Width * 0.24
+                              X: =Parent.Width * 0.26
+                              Y: =Parent.Height * 0.3
+                        - Card.Type.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Loại thẻ:", varSelectedApproval.CardType)
+                              Width: =Parent.Width * 0.23
+                              X: =Parent.Width * 0.5
+                              Y: =Parent.Height * 0.3
+                        - Priority.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Ưu tiên:", Switch(varSelectedApproval.Priority, "High", "Cao", "Normal", "Thường", "Low", "Thấp", "Thường"))
+                              Width: =Parent.Width * 0.24
+                              X: =Parent.Width * 0.73
+                              Y: =Parent.Height * 0.3
+                        - Request.Date.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Ngày tạo:", Text(varSelectedApproval.RequestDate, "dd/mm/yyyy"))
+                              Width: =Parent.Width * 0.23
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.6
+                        - Department.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Phòng ban:", varSelectedApproval.Department)
+                              Width: =Parent.Width * 0.24
+                              X: =Parent.Width * 0.26
+                              Y: =Parent.Height * 0.6
+                        - Current.Status.Detail:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =Concatenate("Trạng thái hiện tại:", Switch(varSelectedApproval.Status, "PendingManagerApproval", "Chờ Manager phê duyệt", "PendingHRApproval", "Chờ HR phê duyệt", "Approved", "Đã phê duyệt", "Rejected", "Bị từ chối", "Không xác định"))
+                              Width: =Parent.Width * 0.47
+                              X: =Parent.Width * 0.5
+                              Y: =Parent.Height * 0.6
+                  - Approval.Timeline.Section:
+                      Control: GroupContainer@1.3.0
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.BackgroundLight
+                        Height: =Parent.Height * 0.69
+                        Width: =Parent.Width * 0.94
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.29
+                      Children:
+                        - Timeline.Section.Title:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.08
+                              Size: =FontSizes.Medium
+                              Text: ="Timeline phê duyệt"
+                              Width: =Parent.Width * 0.4
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.02
+                        - Approval.Steps.Gallery:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Height: =Parent.Height * 0.86
+                              Items: =varSelectedApproval.ApprovalSteps
+                              TemplatePadding: =4
+                              TemplateSize: =Parent.Height * 0.25
+                              Width: =Parent.Width * 0.94
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.12
+                            Children:
+                              - Step.Container:
+                                  Control: Rectangle@2.3.0
+                                  Properties:
+                                    BorderColor: =Colors.BorderLight
+                                    BorderThickness: =1
+                                    Fill: =Colors.White
+                                    Height: =Parent.TemplateHeight
+                                    Width: =Parent.Width
+                              - Step.Number.Circle:
+                                  Control: GroupContainer@1.3.0
+                                  Variant: ManualLayout
+                                  Properties:
+                                    Fill: |
+                                      =Switch(ThisItem.Status,
+                                        "Approved", Colors.Success,
+                                        "Rejected", Colors.Error,
+                                        "Pending", Colors.Warning,
+                                        Colors.Border
+                                      )
+                                    Height: =Parent.Height * 0.6
+                                    Width: =Parent.Height * 0.6
+                                    X: =Parent.Width * 0.03
+                                    Y: =Parent.Height * 0.2
+                                  Children:
+                                    - Step.Number.Text:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Align: =Align.Center
+                                          Color: =Colors.White
+                                          FontWeight: =FontWeight.Bold
+                                          Height: =Parent.Height
+                                          Size: =FontSizes.Medium
+                                          Text: =Text(ThisItem.Step)
+                                          Width: =Parent.Width
+                              - Step.Role.Label:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Bold
+                                    Height: =Parent.Height * 0.3
+                                    Size: =FontSizes.Small
+                                    Text: =Concatenate("Bước ", Text(ThisItem.Step), ":", ThisItem.ApproverRole)
+                                    Width: =Parent.Width * 0.2
+                                    X: =Parent.Width * 0.12
+                                    Y: =Parent.Height * 0.1
+                              - Step.Approver.Name:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =If(IsBlank(ThisItem.ApproverName), Colors.TextMuted, Colors.TextPrimary)
+                                    Height: =Parent.Height * 0.3
+                                    Size: =FontSizes.Small
+                                    Text: =If(IsBlank(ThisItem.ApproverName), "Chưa có người phê duyệt", ThisItem.ApproverName)
+                                    Width: =Parent.Width * 0.2
+                                    X: =Parent.Width * 0.32
+                                    Y: =Parent.Height * 0.1
+                              - Step.Approval.Date:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =If(IsBlank(ThisItem.ApprovalDate), Colors.TextMuted, Colors.TextPrimary)
+                                    Height: =Parent.Height * 0.3
+                                    Size: =FontSizes.Small
+                                    Text: =If(IsBlank(ThisItem.ApprovalDate), "Chưa phê duyệt", Text(ThisItem.ApprovalDate, "dd/mm/yyyy"))
+                                    Width: =Parent.Width * 0.15
+                                    X: =Parent.Width * 0.52
+                                    Y: =Parent.Height * 0.1
+                              - Step.Status.Badge:
+                                  Control: GroupContainer@1.3.0
+                                  Variant: ManualLayout
+                                  Properties:
+                                    Fill: |
+                                      =Switch(ThisItem.Status,
+                                        "Approved", StatusColors.ApprovedBg,
+                                        "Rejected", StatusColors.RejectedBg,
+                                        "Pending", StatusColors.PendingBg,
+                                        Colors.BorderLight
+                                      )
+                                    Height: =Parent.Height * 0.4
+                                    Width: =Parent.Width * 0.12
+                                    X: =Parent.Width * 0.67
+                                    Y: =Parent.Height * 0.05
+                                  Children:
+                                    - Step.Status.Text:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          Align: =Align.Center
+                                          Color: |
+                                            =Switch(ThisItem.Status,
+                                              "Approved", StatusColors.ApprovedText,
+                                              "Rejected", StatusColors.RejectedText,
+                                              "Pending", StatusColors.PendingText,
+                                              Colors.TextMuted
+                                            )
+                                          FontWeight: =FontWeight.Semibold
+                                          Height: =Parent.Height
+                                          Size: =FontSizes.Small
+                                          Text: |
+                                            =Switch(ThisItem.Status,
+                                              "Approved", "Đã duyệt",
+                                              "Rejected", "Từ chối",
+                                              "Pending", "Chờ duyệt",
+                                              "Không rõ"
+                                            )
+                                          Width: =Parent.Width
+                              - Step.Comments.Label:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =Colors.TextPrimary
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =Parent.Height * 0.2
+                                    Size: =FontSizes.Small
+                                    Text: ="Nhận xét:"
+                                    Width: =Parent.Width * 0.15
+                                    X: =Parent.Width * 0.12
+                                    Y: =Parent.Height * 0.45
+                              - Step.Comments.Text:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =If(IsBlank(ThisItem.Comments), Colors.TextMuted, Colors.TextPrimary)
+                                    Height: =Parent.Height * 0.3
+                                    Size: =FontSizes.Small
+                                    Text: =If(IsBlank(ThisItem.Comments), "Không có nhận xét", ThisItem.Comments)
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =Parent.Width * 0.85
+                                    X: =Parent.Width * 0.12
+                                    Y: =Parent.Height * 0.65
