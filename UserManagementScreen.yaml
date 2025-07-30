@@ -24,7 +24,10 @@ Screens:
         Set(varLoadingUsers, false);
         Set(varErrorMessage, "");
         Set(varShowUserDetail, false);
-        Set(varDetailFormMode, "View")
+        Set(varDetailFormMode, "View");
+        Set(varShowContextMenu, false);
+        Set(varContextMenuX, 0);
+        Set(varContextMenuY, 0)
     Children:
       - Main.Content.Container_3:
           Control: GroupContainer
@@ -83,7 +86,7 @@ Screens:
                   Fill: =Colors.BackgroundLight
                   Height: =Parent.Height * 0.88
                   Width: =Parent.Width
-                  Y: =86.15999999999997
+                  Y: =Parent.Height * 0.12
                 Children:
                   - Search.Filter.Bar:
                       Control: GroupContainer
@@ -114,7 +117,7 @@ Screens:
                               X: =Parent.Width * 0.02
                               Y: =Parent.Height * 0.2
                         - Department.Filter_1:
-                            Control: DropDown
+                            Control: Classic/ComboBox
                             Properties:
                               BorderColor: =Colors.Border
                               DefaultSelectedItems: |
@@ -129,7 +132,7 @@ Screens:
                               X: =Parent.Width * 0.4
                               Y: =Parent.Height * 0.2
                         - Role.Filter:
-                            Control: DropDown
+                            Control: Classic/ComboBox
                             Properties:
                               BorderColor: =Colors.Border
                               DefaultSelectedItems: |
@@ -155,51 +158,19 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.12
                       Children:
-                        - Users.Table.Header:
-                            Control: GroupContainer
-                            Variant: ManualLayout
-                            Properties:
-                              Fill: =Colors.Primary
-                              Height: =40
-                              Width: =Parent.Width
-                            Children:
-                              - Header.Name:
-                                  Control: Label
-                                  Properties:
-                                    Color: =Colors.White
-                                    FontWeight: =FontWeight.Bold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Medium
-                                    Text: ="Họ và tên"
-                                    Width: =Parent.Width * 0.25
-                                    X: =25
-                              - Header.Department:
-                                  Control: Label
-                                  Properties:
-                                    Color: =Colors.White
-                                    FontWeight: =FontWeight.Bold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Medium
-                                    Text: ="Phòng ban"
-                                    Width: =Parent.Width * 0.2
-                                    X: =Parent.Width * 0.35
-                              - Header.Role:
-                                  Control: Label
-                                  Properties:
-                                    Color: =Colors.White
-                                    FontWeight: =FontWeight.Bold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Medium
-                                    Text: ="Vai trò"
-                                    Width: =Parent.Width * 0.15
-                                    X: =Parent.Width * 0.75
-                        - Users.Gallery:
-                            Control: Gallery
-                            Variant: Vertical
+                        - Users.DataTable:
+                            Control: DataTable
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
+                              Color: =Colors.TextPrimary
                               Fill: =Colors.White
-                              Height: =Parent.Height - 40
+                              Font: =Font.'Segoe UI'
+                              HeadingColor: =Colors.White
+                              HeadingFill: =Colors.Primary
+                              HeadingFont: =Font.'Segoe UI'
+                              Height: =Parent.Height
+                              HoverColor: =Colors.White
+                              HoverFill: =ColorFade(Colors.Primary, 90%)
                               Items: |
                                 =Filter(colUsers, 
                                   And(
@@ -209,79 +180,177 @@ Screens:
                                   )
                                 )
                               OnSelect: |
-                                =Set(varSelectedUser, ThisItem);
+                                =Set(varSelectedUser, Self.Selected);
                                 Set(varShowUserDetail, true);
                                 Set(varDetailFormMode, "View")
-                              TemplateSize: =60
+                              SelectedColor: =Colors.TextPrimary
+                              SelectedFill: =ColorFade(Colors.Primary, 85%)
                               Width: =Parent.Width
-                              Y: =40
                             Children:
-                              - User.Row.Container:
-                                  Control: GroupContainer
-                                  Variant: ManualLayout
+                              - FullName.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
                                   Properties:
-                                    BorderColor: =If(ThisItem = varSelectedUser, Colors.Primary, Colors.BorderLight)
-                                    BorderThickness: =If(ThisItem = varSelectedUser, 2, 1)
-                                    Fill: =If(ThisItem = varSelectedUser, ColorFade(Colors.Primary, 90%), Colors.White)
-                                    Height: =Parent.TemplateSize - 5
-                                    HoverFill: =ColorFade(Colors.Primary, 95%)
-                                    Width: =Parent.Width - 20
-                                    X: =10
-                                    Y: =2
+                                    FieldDisplayName: ="Họ và tên"
+                                    FieldName: ="FullName"
+                                    Order: =1
+                                    Text: =ThisItem.FullName
+                                    Width: =200
+                              - Email.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Email"
+                                    FieldName: ="Email"
+                                    Order: =2
+                                    Text: =ThisItem.Email
+                                    Width: =250
+                              - Department.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Phòng ban"
+                                    FieldName: ="Department"
+                                    Order: =3
+                                    Text: =ThisItem.Department
+                                    Width: =200
+                              - JobTitle.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Chức vụ"
+                                    FieldName: ="JobTitle"
+                                    Order: =4
+                                    Text: =ThisItem.JobTitle
+                                    Width: =150
+                              - Phone.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Điện thoại"
+                                    FieldName: ="Phone"
+                                    Order: =5
+                                    Text: =ThisItem.Phone
+                                    Width: =120
+                              - Role.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Vai trò"
+                                    FieldName: ="Role"
+                                    Order: =6
+                                    Text: =ThisItem.Role
+                                    Width: =100
+                              - Status.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Trạng thái"
+                                    FieldName: ="Status"
+                                    Order: =7
+                                    Text: =ThisItem.Status
+                                    Width: =100
+                              - Actions.Column:
+                                  Control: DataTableColumn
+                                  Variant: Custom
+                                  Properties:
+                                    FieldDisplayName: ="Thao tác"
+                                    FieldName: ="Actions"
+                                    Order: =8
+                                    Width: =120
                                   Children:
-                                    - User.Name:
-                                        Control: Label
+                                    - Edit.Action.Button:
+                                        Control: Classic/Button
                                         Properties:
-                                          Color: =Colors.TextPrimary
-                                          FontWeight: =FontWeight.Semibold
-                                          Height: =25
-                                          Size: =FontSizes.Medium
-                                          Text: =ThisItem.FullName
-                                          Width: =Parent.Width * 0.25
-                                          X: =15
-                                          Y: =5
-                                    - User.Email:
-                                        Control: Label
-                                        Properties:
-                                          Color: =Colors.TextSecondary
-                                          Height: =20
-                                          Size: =FontSizes.Base
-                                          Text: =ThisItem.Email
-                                          Width: =Parent.Width * 0.3
-                                          X: =15
-                                          Y: =30
-                                    - User.Department:
-                                        Control: Label
-                                        Properties:
-                                          Color: =Colors.TextPrimary
-                                          Height: =25
-                                          Size: =FontSizes.Base
-                                          Text: =ThisItem.Department
-                                          Width: =Parent.Width * 0.2
-                                          X: =Parent.Width * 0.35
-                                          Y: =5
-                                    - User.JobTitle:
-                                        Control: Label
-                                        Properties:
-                                          Color: =Colors.TextSecondary
-                                          Height: =20
-                                          Size: =FontSizes.Base
-                                          Text: =ThisItem.JobTitle
-                                          Width: =Parent.Width * 0.2
-                                          X: =Parent.Width * 0.35
-                                          Y: =30
-                                    - User.Role:
-                                        Control: Label
-                                        Properties:
+                                          BorderColor: =Colors.Primary
                                           Color: =Colors.Primary
-                                          FontWeight: =FontWeight.Semibold
-                                          Height: =25
-                                          Size: =FontSizes.Base
-                                          Text: =ThisItem.Role
-                                          Width: =Parent.Width * 0.15
-                                          X: =Parent.Width * 0.75
-                                          Y: =15
-
+                                          Fill: =RGBA(0, 0, 0, 0)
+                                          Height: =30
+                                          OnSelect: |
+                                            =Set(varEditingUser, ThisItem);
+                                            Set(varFormMode, "Edit");
+                                            Set(varShowUserForm, true)
+                                          Size: =FontSizes.Small
+                                          Text: ="Sửa"
+                                          Width: =50
+                                          X: =5
+                                          Y: =5
+                                    - Delete.Action.Button:
+                                        Control: Classic/Button
+                                        Properties:
+                                          BorderColor: =Colors.Error
+                                          Color: =Colors.Error
+                                          Fill: =RGBA(0, 0, 0, 0)
+                                          Height: =30
+                                          OnSelect: |
+                                            =Set(varSelectedUser, ThisItem);
+                                            Set(varDeleteConfirm, true)
+                                          Size: =FontSizes.Small
+                                          Text: ="Xóa"
+                                          Width: =50
+                                          X: =60
+                                          Y: =5
+                        - User.Context.Menu:
+                            Control: GroupContainer
+                            Variant: ManualLayout
+                            Properties:
+                              BorderColor: =Colors.Border
+                              BorderThickness: =1
+                              Fill: =Colors.White
+                              Height: =120
+                              Visible: =varShowContextMenu
+                              Width: =150
+                              X: =varContextMenuX
+                              Y: =varContextMenuY
+                            Children:
+                              - View.Context.Button:
+                                  Control: Classic/Button
+                                  Properties:
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    Color: =Colors.TextPrimary
+                                    Fill: =RGBA(0, 0, 0, 0)
+                                    Height: =40
+                                    HoverFill: =Colors.BackgroundLight
+                                    OnSelect: |
+                                      =Set(varShowUserDetail, true);
+                                      Set(varDetailFormMode, "View");
+                                      Set(varShowContextMenu, false)
+                                    Size: =FontSizes.Base
+                                    Text: ="👁 Xem chi tiết"
+                                    Width: =Parent.Width
+                              - Edit.Context.Button:
+                                  Control: Classic/Button
+                                  Properties:
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    Color: =Colors.TextPrimary
+                                    Fill: =RGBA(0, 0, 0, 0)
+                                    Height: =40
+                                    HoverFill: =Colors.BackgroundLight
+                                    OnSelect: |
+                                      =Set(varEditingUser, varSelectedUser);
+                                      Set(varFormMode, "Edit");
+                                      Set(varShowUserForm, true);
+                                      Set(varShowContextMenu, false)
+                                    Size: =FontSizes.Base
+                                    Text: ="✎ Chỉnh sửa"
+                                    Width: =Parent.Width
+                                    Y: =40
+                              - Delete.Context.Button:
+                                  Control: Classic/Button
+                                  Properties:
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    Color: =Colors.Error
+                                    Fill: =RGBA(0, 0, 0, 0)
+                                    Height: =40
+                                    HoverFill: =Colors.BackgroundLight
+                                    OnSelect: |
+                                      =Set(varDeleteConfirm, true);
+                                      Set(varShowContextMenu, false)
+                                    Size: =FontSizes.Base
+                                    Text: ="🗑 Xóa"
+                                    Width: =Parent.Width
+                                    Y: =80
+ 
       - User.Form.Modal.Overlay:
           Control: Rectangle
           Properties:
@@ -771,7 +840,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.FullName
                               Visible: =varDetailFormMode = "View"
@@ -808,7 +876,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.Email
                               Visible: =varDetailFormMode = "View"
@@ -845,7 +912,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.Department
                               Visible: =varDetailFormMode = "View"
@@ -885,7 +951,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.JobTitle
                               Visible: =varDetailFormMode = "View"
@@ -922,7 +987,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.Phone
                               Visible: =varDetailFormMode = "View"
@@ -959,7 +1023,6 @@ Screens:
                               Color: =Colors.TextPrimary
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
-                              PaddingLeft: =10
                               Size: =FontSizes.Base
                               Text: =varSelectedUser.Role
                               Visible: =varDetailFormMode = "View"
