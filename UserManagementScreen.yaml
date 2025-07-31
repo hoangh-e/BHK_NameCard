@@ -117,34 +117,49 @@ Screens:
                               X: =Parent.Width * 0.02
                               Y: =Parent.Height * 0.2
                         - Department.Filter_1:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =Colors.Border
-                              DefaultSelectedItems: |
-                                =Table({Name: "Tất cả"})
+                              Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Tất cả"}, {Name: "Phòng Công nghệ thông tin"}, {Name: "Phòng Kế toán"}, {Name: "Phòng Nhân sự"}, {Name: "Phòng Marketing"}, {Name: "Ban Giám đốc"})
+                              Items: =["Tất cả", "Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
                               OnChange: |
-                                =Set(varSelectedDepartment, If(Self.Selected.Result.Name = "Tất cả", "", Self.Selected.Result.Name))
+                                =Set(varSelectedDepartment, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.25
                               X: =Parent.Width * 0.4
                               Y: =Parent.Height * 0.2
                         - Role.Filter:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =Colors.Border
-                              DefaultSelectedItems: |
-                                =Table({Name: "Tất cả"})
+                              Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Tất cả"}, {Name: "Employee"}, {Name: "Manager"}, {Name: "HR"}, {Name: "Admin"})
+                              Items: =["Tất cả", "Employee", "Manager", "HR", "Admin"]
                               OnChange: |
-                                =Set(varSelectedRole, If(Self.Selected.Result.Name = "Tất cả", "", Self.Selected.Result.Name))
+                                =Set(varSelectedRole, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.68
+                              Y: =Parent.Height * 0.2
+                        - View.Selected.Button:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =Colors.Success
+                              Color: =Colors.Success
+                              DisplayMode: =If(IsBlank('Users.DataTable'.Selected), DisplayMode.Disabled, DisplayMode.Edit)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Height: =Styles.Input.Height
+                              OnSelect: |
+                                =If(Not(IsBlank('Users.DataTable'.Selected)),
+                                  Set(varSelectedUser, 'Users.DataTable'.Selected);
+                                  Set(varShowUserDetail, true);
+                                  Set(varDetailFormMode, "View")
+                                )
+                              Size: =FontSizes.Base
+                              Text: =If(IsBlank('Users.DataTable'.Selected), "Chọn người dùng", "👁 Xem chi tiết")
+                              Width: =Parent.Width * 0.15
+                              X: =Parent.Width * 0.86
                               Y: =Parent.Height * 0.2
                   - Users.Data.Table:
                       Control: GroupContainer
@@ -179,10 +194,6 @@ Screens:
                                     Or(IsBlank(varSelectedRole), Role = varSelectedRole)
                                   )
                                 )
-                              OnSelect: |
-                                =Set(varSelectedUser, Self.Selected);
-                                Set(varShowUserDetail, true);
-                                Set(varDetailFormMode, "View")
                               SelectedColor: =Colors.TextPrimary
                               SelectedFill: =ColorFade(Colors.Primary, 85%)
                               Width: =Parent.Width
@@ -252,44 +263,13 @@ Screens:
                                     Width: =100
                               - Actions.Column:
                                   Control: DataTableColumn
-                                  Variant: Custom
+                                  Variant: Textual
                                   Properties:
                                     FieldDisplayName: ="Thao tác"
                                     FieldName: ="Actions"
                                     Order: =8
+                                    Text: ="Sửa | Xóa"
                                     Width: =120
-                                  Children:
-                                    - Edit.Action.Button:
-                                        Control: Classic/Button
-                                        Properties:
-                                          BorderColor: =Colors.Primary
-                                          Color: =Colors.Primary
-                                          Fill: =RGBA(0, 0, 0, 0)
-                                          Height: =30
-                                          OnSelect: |
-                                            =Set(varEditingUser, ThisItem);
-                                            Set(varFormMode, "Edit");
-                                            Set(varShowUserForm, true)
-                                          Size: =FontSizes.Small
-                                          Text: ="Sửa"
-                                          Width: =50
-                                          X: =5
-                                          Y: =5
-                                    - Delete.Action.Button:
-                                        Control: Classic/Button
-                                        Properties:
-                                          BorderColor: =Colors.Error
-                                          Color: =Colors.Error
-                                          Fill: =RGBA(0, 0, 0, 0)
-                                          Height: =30
-                                          OnSelect: |
-                                            =Set(varSelectedUser, ThisItem);
-                                            Set(varDeleteConfirm, true)
-                                          Size: =FontSizes.Small
-                                          Text: ="Xóa"
-                                          Width: =50
-                                          X: =60
-                                          Y: =5
                         - User.Context.Menu:
                             Control: GroupContainer
                             Variant: ManualLayout
@@ -478,17 +458,12 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =70
                         - Department.Dropdown:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              DefaultSelectedItems: |
-                                =If(varFormMode = "Edit", 
-                                Filter(Table({Name: "Phòng Công nghệ thông tin"}, {Name: "Phòng Kế toán"}, {Name: "Phòng Nhân sự"}, {Name: "Phòng Marketing"}, {Name: "Ban Giám đốc"}), Name = varEditingUser.Department),
-                                Blank()
-                                )
+                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              Default: =If(varFormMode = "Edit", varEditingUser.Department, "Phòng Công nghệ thông tin")
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Phòng Công nghệ thông tin"}, {Name: "Phòng Kế toán"}, {Name: "Phòng Nhân sự"}, {Name: "Phòng Marketing"}, {Name: "Ban Giám đốc"})
+                              Items: =["Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
                               Size: =FontSizes.Base
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.05
@@ -549,17 +524,12 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =140
                         - Role.Dropdown:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              DefaultSelectedItems: |
-                                =If(varFormMode = "Edit",
-                                Filter(Table({Name: "Employee"}, {Name: "Manager"}, {Name: "HR"}, {Name: "Admin"}), Name = varEditingUser.Role),
-                                Table({Name: "Employee"})
-                                )
+                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              Default: =If(varFormMode = "Edit", varEditingUser.Role, "Employee")
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Employee"}, {Name: "Manager"}, {Name: "HR"}, {Name: "Admin"})
+                              Items: =["Employee", "Manager", "HR", "Admin"]
                               Size: =FontSizes.Base
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.55
@@ -599,7 +569,7 @@ Screens:
                           =If(And(
                             Not(IsBlank('FullName.Input'.Text)), 
                             Not(IsBlank('Email.Input'.Text)), 
-                            Not(IsBlank('Department.Dropdown'.Selected.Name)), 
+                            Not(IsBlank('Department.Dropdown'.Selected.Value)), 
                             Not(IsBlank('JobTitle.Input_1'.Text)), 
                             Not(IsBlank('Phone.Input'.Text))
                           ), DisplayMode.Edit, DisplayMode.Disabled)
@@ -612,19 +582,19 @@ Screens:
                               Id: Max(colUsers, Id) + 1,
                               FullName: 'FullName.Input'.Text,
                               Email: 'Email.Input'.Text,
-                              Department: 'Department.Dropdown'.Selected.Name,
+                              Department: 'Department.Dropdown'.Selected.Value,
                               JobTitle: 'JobTitle.Input_1'.Text,
                               Phone: 'Phone.Input'.Text,
-                              Role: 'Role.Dropdown'.Selected.Name,
+                              Role: 'Role.Dropdown'.Selected.Value,
                               Status: "Active"
                             }),
                             UpdateIf(colUsers, Id = varEditingUser.Id, {
                               FullName: 'FullName.Input'.Text,
                               Email: 'Email.Input'.Text,
-                              Department: 'Department.Dropdown'.Selected.Name,
+                              Department: 'Department.Dropdown'.Selected.Value,
                               JobTitle: 'JobTitle.Input_1'.Text,
                               Phone: 'Phone.Input'.Text,
-                              Role: 'Role.Dropdown'.Selected.Name
+                              Role: 'Role.Dropdown'.Selected.Value
                             })
                           );
                           Set(varShowUserForm, false);
@@ -919,14 +889,12 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =120
                         - Detail.Department.Dropdown:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              DefaultSelectedItems: |
-                                =Filter(Table({Name: "Phòng Công nghệ thông tin"}, {Name: "Phòng Kế toán"}, {Name: "Phòng Nhân sự"}, {Name: "Phòng Marketing"}, {Name: "Ban Giám đốc"}), Name = varSelectedUser.Department)
+                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              Default: =varSelectedUser.Department
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Phòng Công nghệ thông tin"}, {Name: "Phòng Kế toán"}, {Name: "Phòng Nhân sự"}, {Name: "Phòng Marketing"}, {Name: "Ban Giám đốc"})
+                              Items: =["Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1030,14 +998,12 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =195
                         - Detail.Role.Dropdown:
-                            Control: Classic/ComboBox
+                            Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              DefaultSelectedItems: |
-                                =Filter(Table({Name: "Employee"}, {Name: "Manager"}, {Name: "HR"}, {Name: "Admin"}), Name = varSelectedUser.Role)
+                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              Default: =varSelectedUser.Role
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Table({Name: "Employee"}, {Name: "Manager"}, {Name: "HR"}, {Name: "Admin"})
+                              Items: =["Employee", "Manager", "HR", "Admin"]
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1082,10 +1048,10 @@ Screens:
                           =UpdateIf(colUsers, Id = varSelectedUser.Id, {
                             FullName: 'Detail.FullName.Input'.Text,
                             Email: 'Detail.Email.Input'.Text,
-                            Department: 'Detail.Department.Dropdown'.Selected.Name,
+                            Department: 'Detail.Department.Dropdown'.Selected.Value,
                             JobTitle: 'Detail.JobTitle.Input'.Text,
                             Phone: 'Detail.Phone.Input'.Text,
-                            Role: 'Detail.Role.Dropdown'.Selected.Name
+                            Role: 'Detail.Role.Dropdown'.Selected.Value
                           });
                           Set(varSelectedUser, LookUp(colUsers, Id = varSelectedUser.Id));
                           Set(varDetailFormMode, "View");
