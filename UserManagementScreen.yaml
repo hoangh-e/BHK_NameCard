@@ -3,19 +3,18 @@ Screens:
     Properties:
       Fill: =Colors.BackgroundLight
       OnVisible: |
-        =ClearCollect(colDepartments, 
-          {Id: 1, Name: "Phòng Công nghệ thông tin"},
-          {Id: 2, Name: "Phòng Kế toán"},
-          {Id: 3, Name: "Phòng Nhân sự"},
-          {Id: 4, Name: "Phòng Marketing"},
-          {Id: 5, Name: "Ban Giám đốc"}
+        =// Load SharePoint data first
+        ClearCollect(colDepartments, Department_1);
+        ClearCollect(colRoles, Role_1);
+        ClearCollect(colUsers, 
+          AddColumns(
+            AddColumns(User_1, 
+              "Department", LookUp(Department_1, departmentID = ThisRecord.departmentID).name
+            ),
+            "Role", LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
+          )
         );
-        ClearCollect(colUsers,
-          {Id: 1, FullName: "Nguyễn Văn An", Email: "an.nguyen@company.com", Department: "Phòng Công nghệ thông tin", JobTitle: "Trưởng phòng", Phone: "0901234567", Role: "Manager", Status: "Active"},
-          {Id: 2, FullName: "Trần Thị Bình", Email: "binh.tran@company.com", Department: "Phòng Nhân sự", JobTitle: "Chuyên viên HR", Phone: "0901234568", Role: "HR", Status: "Active"},
-          {Id: 3, FullName: "Lê Văn Cường", Email: "cuong.le@company.com", Department: "Phòng Kế toán", JobTitle: "Kế toán viên", Phone: "0901234569", Role: "Employee", Status: "Active"},
-          {Id: 4, FullName: "Phạm Thị Dung", Email: "dung.pham@company.com", Department: "Phòng Marketing", JobTitle: "Giám đốc", Phone: "0901234570", Role: "Admin", Status: "Active"}
-        );
+        // Reset form states
         Set(varShowUserForm, false);
         Set(varFormMode, "Add");
         Set(varEditingUser, Blank());
@@ -123,7 +122,12 @@ Screens:
                               Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: =["Tất cả", "Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
+                              Items: |
+                                =Concat(
+                                  Table({Name: "Tất cả"}),
+                                  AddColumns(Department_1, "Name", name),
+                                  Value
+                                )
                               OnChange: |
                                 =Set(varSelectedDepartment, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.25
@@ -136,7 +140,12 @@ Screens:
                               Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: =["Tất cả", "Employee", "Manager", "HR", "Admin"]
+                              Items: |
+                                =Concat(
+                                  Table({Name: "Tất cả"}),
+                                  AddColumns(Role_1, "Name", name),
+                                  Value
+                                )
                               OnChange: |
                                 =Set(varSelectedRole, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.15
@@ -270,6 +279,21 @@ Screens:
                                     Order: =8
                                     Text: ="Sửa | Xóa"
                                     Width: =120
+                        - DataTable.Selection.Handler:
+                            Control: Rectangle
+                            Properties:
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Height: ='Users.DataTable'.Height
+                              Width: ='Users.DataTable'.Width
+                              X: ='Users.DataTable'.X
+                              Y: ='Users.DataTable'.Y
+                              OnSelect: |
+                                =If(Not(IsBlank('Users.DataTable'.Selected)),
+                                  Set(varSelectedUser, 'Users.DataTable'.Selected);
+                                  Set(varContextMenuX, Min(App.ActiveScreen.Width - 150, App.MouseX));
+                                  Set(varContextMenuY, Min(App.ActiveScreen.Height - 120, App.MouseY));
+                                  Set(varShowContextMenu, true)
+                                )
                         - User.Context.Menu:
                             Control: GroupContainer
                             Variant: ManualLayout
@@ -394,146 +418,748 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.12
                 Children:
-                  - Form.Fields.Container:
-                      Control: GroupContainer
-                      Variant: ManualLayout
+                  - User.Add.Edit.Form:
+                      Control: Form
+                      Variant: Classic
+                      Layout: Vertical
                       Properties:
+                        DataSource: =User_1
+                        DefaultMode: =If(varFormMode = "Add", FormMode.New, FormMode.Edit)
+                        Item: =If(varFormMode = "Edit", varEditingUser, Defaults(User_1))
+                        OnFailure: |
+                          =Notify("Có lỗi khi lưu dữ liệu: " & FirstError.Message, NotificationType.Error)
+                        OnReset: |
+                          =Set(varFormMode, "Add"); Set(varEditingUser, Blank())
+                        OnSuccess: |
+                          =With({
+                            newUserID: Concatenate("USER_", Text(Rand() * 1000000, "000000"))
+                          },
+                            If(varFormMode = "Add",
+                              // Create new user
+                              Patch(User_1, Defaults(User_1), {
+                                userID: newUserID,
+                                fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,
+                                email: 'User.Add.Edit.Form'.email_DataCard.Update,
+                                departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update.departmentID,
+                                jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,
+                                phone: 'User.Add.Edit.Form'.phone_DataCard.Update
+                              });
+                              // Create user role mapping
+                              Patch(User_Role, Defaults(User_Role), {
+                                userID: newUserID,
+                                roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update.roleID
+                              }),
+                              // Update existing user
+                              Patch(User_1, LookUp(User_1, userID = varEditingUser.userID), {
+                                fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,
+                                email: 'User.Add.Edit.Form'.email_DataCard.Update,
+                                departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update.departmentID,
+                                jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,
+                                phone: 'User.Add.Edit.Form'.phone_DataCard.Update
+                              });
+                              // Update user role mapping
+                              Patch(User_Role, LookUp(User_Role, userID = varEditingUser.userID), {
+                                roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update.roleID
+                              })
+                            )
+                          );
+                          // Refresh collections
+                          ClearCollect(colUsers, 
+                            AddColumns(
+                              AddColumns(User_1, 
+                                "Department", LookUp(Department_1, departmentID = ThisRecord.departmentID).name
+                              ),
+                              "Role", LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
+                            )
+                          );
+                          Set(varShowUserForm, false);
+                          Notify(If(varFormMode = "Add", "Đã thêm người dùng thành công!", "Đã cập nhật thông tin người dùng!"), NotificationType.Success)
                         Fill: =Colors.White
                         Height: =Parent.Height
                         Width: =Parent.Width
                       Children:
-                        - FullName.Label:
-                            Control: Label
+                        - fullname_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicTextualEdit
+                            IsLocked: true
                             Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Họ và tên *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =0
-                        - FullName.Input:
-                            Control: Classic/TextInput
-                            Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="fullname"
                               Default: =If(varFormMode = "Edit", varEditingUser.FullName, "")
-                              Height: =Styles.Input.Height
-                              HintText: ="Nhập họ và tên"
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =20
-                        - Email.Label:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Email *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
+                              DisplayName: ="Họ và tên"
+                              Required: =true
+                              Update: =DataCardValue1.Text
+                              Width: =266
+                              X: =0
                               Y: =0
-                        - Email.Input:
-                            Control: Classic/TextInput
+                            Children:
+                              - DataCardKey1:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue1:
+                                  Control: Classic/TextInput
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    Default: =Parent.Default
+                                    DelayOutput: =true
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayMode: =Parent.DisplayMode
+                                    Font: =Font.'Segoe UI'
+                                    HintText: ="Nhập họ và tên"
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(255, 255, 255, 1)
+                                    PaddingLeft: =5
+                                    PressedBorderColor: =RGBA(0, 120, 212, 1)
+                                    PressedColor: =RGBA(50, 49, 48, 1)
+                                    PressedFill: =RGBA(255, 255, 255, 1)
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey1.Y + DataCardKey1.Height + 5
+                              - ErrorMessage1:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue1.Y + DataCardValue1.Height
+                              - StarVisible1:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey1.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey1.Y
+                        - email_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicTextualEdit
+                            IsLocked: true
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="email"
                               Default: =If(varFormMode = "Edit", varEditingUser.Email, "")
-                              Height: =Styles.Input.Height
-                              HintText: ="Nhập email"
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
-                              Y: =20
-                        - Department.Label:
-                            Control: Label
+                              DisplayName: ="Email"
+                              Required: =true
+                              Update: =DataCardValue2.Text
+                              Width: =266
+                              X: =280
+                              Y: =0
+                            Children:
+                              - DataCardKey2:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue2:
+                                  Control: Classic/TextInput
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    Default: =Parent.Default
+                                    DelayOutput: =true
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayMode: =Parent.DisplayMode
+                                    Font: =Font.'Segoe UI'
+                                    Format: =TextFormat.Email
+                                    HintText: ="Nhập email"
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(255, 255, 255, 1)
+                                    PaddingLeft: =5
+                                    PressedBorderColor: =RGBA(0, 120, 212, 1)
+                                    PressedColor: =RGBA(50, 49, 48, 1)
+                                    PressedFill: =RGBA(255, 255, 255, 1)
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey2.Y + DataCardKey2.Height + 5
+                              - ErrorMessage2:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue2.Y + DataCardValue2.Height
+                              - StarVisible2:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey2.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey2.Y
+                        - departmentID_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicComboBoxEdit
+                            IsLocked: true
                             Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Phòng ban *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =70
-                        - Department.Dropdown:
-                            Control: Classic/DropDown
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="departmentID"
+                              Default: =If(varFormMode = "Edit", LookUp(Department_1, name = varEditingUser.Department), LookUp(Department_1, name = "Phòng Công nghệ thông tin"))
+                              DisplayName: ="Phòng ban"
+                              Required: =true
+                              Update: =DataCardValue3.Selected
+                              Width: =266
+                              X: =0
+                              Y: =100
+                            Children:
+                              - DataCardKey3:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue3:
+                                  Control: Classic/ComboBox
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    ChevronBackground: =RGBA(245, 245, 245, 1)
+                                    ChevronDisabledBackground: =RGBA(242, 242, 241, 0)
+                                    ChevronDisabledFill: =RGBA(161, 159, 157, 1)
+                                    ChevronFill: =RGBA(50, 49, 48, 1)
+                                    ChevronHoverBackground: =RGBA(245, 245, 245, 1)
+                                    ChevronHoverFill: =RGBA(50, 49, 48, 1)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DefaultSelectedItems: =Parent.Default
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayFields: =["name"]
+                                    DisplayMode: =Parent.DisplayMode
+                                    Fill: =RGBA(245, 245, 245, 1)
+                                    Font: =Font.'Segoe UI'
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(245, 245, 245, 1)
+                                    Items: =Department_1
+                                    PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
+                                    PressedBorderColor: =RGBA(16, 110, 190, 1)
+                                    PressedColor: =RGBA(255, 255, 255, 1)
+                                    PressedFill: =RGBA(0, 120, 212, 1)
+                                    SearchFields: =["name"]
+                                    SelectMultiple: =false
+                                    SelectionColor: =RGBA(255, 255, 255, 1)
+                                    SelectionFill: =RGBA(0, 120, 212, 1)
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey3.Y + DataCardKey3.Height + 5
+                              - ErrorMessage3:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue3.Y + DataCardValue3.Height
+                              - StarVisible3:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey3.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey3.Y
+                        - jobTitle_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicTextualEdit
+                            IsLocked: true
                             Properties:
-                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
-                              Default: =If(varFormMode = "Edit", varEditingUser.Department, "Phòng Công nghệ thông tin")
-                              Height: =Styles.Input.Height
-                              Items: =["Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =90
-                        - JobTitle.Label:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Chức vụ *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
-                              Y: =70
-                        - JobTitle.Input_1:
-                            Control: Classic/TextInput
-                            Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="jobTitle"
                               Default: =If(varFormMode = "Edit", varEditingUser.JobTitle, "")
-                              Height: =Styles.Input.Height
-                              HintText: ="Nhập chức vụ"
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
-                              Y: =90
-                        - Phone.Label:
-                            Control: Label
+                              DisplayName: ="Chức vụ"
+                              Required: =true
+                              Update: =DataCardValue4.Text
+                              Width: =266
+                              X: =280
+                              Y: =100
+                            Children:
+                              - DataCardKey4:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue4:
+                                  Control: Classic/TextInput
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    Default: =Parent.Default
+                                    DelayOutput: =true
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayMode: =Parent.DisplayMode
+                                    Font: =Font.'Segoe UI'
+                                    HintText: ="Nhập chức vụ"
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(255, 255, 255, 1)
+                                    PaddingLeft: =5
+                                    PressedBorderColor: =RGBA(0, 120, 212, 1)
+                                    PressedColor: =RGBA(50, 49, 48, 1)
+                                    PressedFill: =RGBA(255, 255, 255, 1)
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey4.Y + DataCardKey4.Height + 5
+                              - ErrorMessage4:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue4.Y + DataCardValue4.Height
+                              - StarVisible4:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey4.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey4.Y
+                        - phone_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicTextualEdit
+                            IsLocked: true
                             Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Số điện thoại *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =140
-                        - Phone.Input:
-                            Control: Classic/TextInput
-                            Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="phone"
                               Default: =If(varFormMode = "Edit", varEditingUser.Phone, "")
-                              Height: =Styles.Input.Height
-                              HintText: ="Nhập số điện thoại"
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.05
-                              Y: =160
-                        - Role.Label:
-                            Control: Label
+                              DisplayName: ="Số điện thoại"
+                              Required: =true
+                              Update: =DataCardValue5.Text
+                              Width: =266
+                              X: =0
+                              Y: =200
+                            Children:
+                              - DataCardKey5:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue5:
+                                  Control: Classic/TextInput
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    Default: =Parent.Default
+                                    DelayOutput: =true
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayMode: =Parent.DisplayMode
+                                    Font: =Font.'Segoe UI'
+                                    Format: =TextFormat.Number
+                                    HintText: ="Nhập số điện thoại"
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(255, 255, 255, 1)
+                                    PaddingLeft: =5
+                                    PressedBorderColor: =RGBA(0, 120, 212, 1)
+                                    PressedColor: =RGBA(50, 49, 48, 1)
+                                    PressedFill: =RGBA(255, 255, 255, 1)
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey5.Y + DataCardKey5.Height + 5
+                              - ErrorMessage5:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue5.Y + DataCardValue5.Height
+                              - StarVisible5:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey5.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey5.Y
+                        - roleID_DataCard:
+                            Control: TypedDataCard
+                            Variant: ClassicComboBoxEdit
+                            IsLocked: true
                             Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =25
-                              Size: =FontSizes.Base
-                              Text: ="Vai trò *"
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
-                              Y: =140
-                        - Role.Dropdown:
-                            Control: Classic/DropDown
-                            Properties:
-                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
-                              Default: =If(varFormMode = "Edit", varEditingUser.Role, "Employee")
-                              Height: =Styles.Input.Height
-                              Items: =["Employee", "Manager", "HR", "Admin"]
-                              Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.4
-                              X: =Parent.Width * 0.55
-                              Y: =160
+                              BorderColor: =RGBA(245, 245, 245, 1)
+                              DataField: ="roleID"
+                              Default: =If(varFormMode = "Edit", LookUp(Role_1, name = varEditingUser.Role), LookUp(Role_1, name = "Employee"))
+                              DisplayName: ="Vai trò"
+                              Required: =true
+                              Update: =DataCardValue6.Selected
+                              Width: =266
+                              X: =280
+                              Y: =200
+                            Children:
+                              - DataCardKey6:
+                                  Control: Label
+                                  MetadataKey: FieldName
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =34
+                                    PaddingLeft: =0
+                                    Text: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    Wrap: =false
+                                    X: =30
+                                    Y: =10
+                              - DataCardValue6:
+                                  Control: Classic/ComboBox
+                                  MetadataKey: FieldValue
+                                  Properties:
+                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
+                                    ChevronBackground: =RGBA(245, 245, 245, 1)
+                                    ChevronDisabledBackground: =RGBA(242, 242, 241, 0)
+                                    ChevronDisabledFill: =RGBA(161, 159, 157, 1)
+                                    ChevronFill: =RGBA(50, 49, 48, 1)
+                                    ChevronHoverBackground: =RGBA(245, 245, 245, 1)
+                                    ChevronHoverFill: =RGBA(50, 49, 48, 1)
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DefaultSelectedItems: =Parent.Default
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    DisabledFill: =RGBA(242, 242, 241, 0)
+                                    DisplayFields: =["name"]
+                                    DisplayMode: =Parent.DisplayMode
+                                    Fill: =RGBA(245, 245, 245, 1)
+                                    Font: =Font.'Segoe UI'
+                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
+                                    HoverColor: =RGBA(50, 49, 48, 1)
+                                    HoverFill: =RGBA(245, 245, 245, 1)
+                                    Items: =Role_1
+                                    PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
+                                    PressedBorderColor: =RGBA(16, 110, 190, 1)
+                                    PressedColor: =RGBA(255, 255, 255, 1)
+                                    PressedFill: =RGBA(0, 120, 212, 1)
+                                    SearchFields: =["name"]
+                                    SelectMultiple: =false
+                                    SelectionColor: =RGBA(255, 255, 255, 1)
+                                    SelectionFill: =RGBA(0, 120, 212, 1)
+                                    Tooltip: =Parent.DisplayName
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardKey6.Y + DataCardKey6.Height + 5
+                              - ErrorMessage6:
+                                  Control: Label
+                                  MetadataKey: ErrorMessage
+                                  Properties:
+                                    AutoHeight: =true
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(168, 0, 0, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(168, 0, 0, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =10
+                                    Live: =Live.Assertive
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Text: =Parent.Error
+                                    Visible: =Parent.DisplayMode=DisplayMode.Edit
+                                    Width: =Parent.Width - 60
+                                    X: =30
+                                    Y: =DataCardValue6.Y + DataCardValue6.Height
+                              - StarVisible6:
+                                  Control: Label
+                                  MetadataKey: FieldRequired
+                                  Properties:
+                                    Align: =Align.Center
+                                    BorderColor: =RGBA(0, 0, 0, 0)
+                                    BorderStyle: =BorderStyle.None
+                                    BorderThickness: =2
+                                    Color: =RGBA(50, 49, 48, 1)
+                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                                    DisabledColor: =RGBA(161, 159, 157, 1)
+                                    FocusedBorderThickness: =4
+                                    Font: =Font.'Segoe UI'
+                                    FontWeight: =FontWeight.Semibold
+                                    Height: =DataCardKey6.Height
+                                    PaddingLeft: =0
+                                    Text: ="*"
+                                    Visible: =And(Parent.Required, Parent.DisplayMode=DisplayMode.Edit)
+                                    Width: =30
+                                    Wrap: =false
+                                    Y: =DataCardKey6.Y
             - Form.Footer_1:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -554,7 +1180,8 @@ Screens:
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Secondary.HoverFill
                         OnSelect: |
-                          =Set(varShowUserForm, false)
+                          =ResetForm('User.Add.Edit.Form');
+                          Set(varShowUserForm, false)
                         Size: =FontSizes.Medium
                         Text: ="Hủy"
                         Width: =Parent.Width * 0.15
@@ -565,40 +1192,12 @@ Screens:
                       Properties:
                         BorderColor: =Colors.Primary
                         Color: =Styles.Button.Primary.Color
-                        DisplayMode: |
-                          =If(And(
-                            Not(IsBlank('FullName.Input'.Text)), 
-                            Not(IsBlank('Email.Input'.Text)), 
-                            Not(IsBlank('Department.Dropdown'.Selected.Value)), 
-                            Not(IsBlank('JobTitle.Input_1'.Text)), 
-                            Not(IsBlank('Phone.Input'.Text))
-                          ), DisplayMode.Edit, DisplayMode.Disabled)
+                        DisplayMode: =If('User.Add.Edit.Form'.Valid, DisplayMode.Edit, DisplayMode.Disabled)
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
                         OnSelect: |
-                          =If(varFormMode = "Add",
-                            Collect(colUsers, {
-                              Id: Max(colUsers, Id) + 1,
-                              FullName: 'FullName.Input'.Text,
-                              Email: 'Email.Input'.Text,
-                              Department: 'Department.Dropdown'.Selected.Value,
-                              JobTitle: 'JobTitle.Input_1'.Text,
-                              Phone: 'Phone.Input'.Text,
-                              Role: 'Role.Dropdown'.Selected.Value,
-                              Status: "Active"
-                            }),
-                            UpdateIf(colUsers, Id = varEditingUser.Id, {
-                              FullName: 'FullName.Input'.Text,
-                              Email: 'Email.Input'.Text,
-                              Department: 'Department.Dropdown'.Selected.Value,
-                              JobTitle: 'JobTitle.Input_1'.Text,
-                              Phone: 'Phone.Input'.Text,
-                              Role: 'Role.Dropdown'.Selected.Value
-                            })
-                          );
-                          Set(varShowUserForm, false);
-                          Notify(If(varFormMode = "Add", "Đã thêm người dùng thành công!", "Đã cập nhật thông tin người dùng!"), NotificationType.Success)
+                          =SubmitForm('User.Add.Edit.Form')
                         Size: =FontSizes.Medium
                         Text: =If(varFormMode = "Add", "Thêm người dùng", "Cập nhật")
                         Width: =Parent.Width * 0.2
