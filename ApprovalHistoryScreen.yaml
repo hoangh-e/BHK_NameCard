@@ -3,29 +3,44 @@ Screens:
     Properties:
       Fill: =Colors.BackgroundLight
       OnVisible: |
-        =ClearCollect(colApprovalHistory,
-          {Id: 1, RequestId: 1, RequestCode: "YC-001", EmployeeName: "Nguyễn Văn An", CardType: "Standard", 
-           RequestDate: Date(2024, 1, 15), Status: "Approved", ApprovalSteps: [
-             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 16), Status: "Approved", Comments: "Đồng ý cấp thẻ tên cho nhân viên"},
-             {Step: 2, ApproverRole: "HR", ApproverName: "Lê Văn Cường", ApprovalDate: Date(2024, 1, 18), Status: "Approved", Comments: "Thông tin hợp lệ, chuyển in thẻ"}
-           ],
-           Department: "Phòng Công nghệ thông tin", Priority: "Normal", CurrentStep: 2, TotalSteps: 2},
-          {Id: 2, RequestId: 2, RequestCode: "YC-002", EmployeeName: "Nguyễn Văn An", CardType: "Executive", 
-           RequestDate: Date(2024, 1, 10), Status: "PendingManagerApproval", ApprovalSteps: [
-             {Step: 1, ApproverRole: "Manager", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
-           ],
-           Department: "Phòng Công nghệ thông tin", Priority: "High", CurrentStep: 1, TotalSteps: 2},
-          {Id: 3, RequestId: 3, RequestCode: "YC-003", EmployeeName: "Nguyễn Văn An", CardType: "Temporary", 
-           RequestDate: Date(2024, 1, 5), Status: "Rejected", ApprovalSteps: [
-             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 8), Status: "Rejected", Comments: "Không cần thiết cho dự án ngắn hạn"}
-           ],
-           Department: "Phòng Công nghệ thông tin", Priority: "Low", CurrentStep: 1, TotalSteps: 2},
-          {Id: 4, RequestId: 4, RequestCode: "YC-004", EmployeeName: "Phạm Thị Dung", CardType: "Standard", 
-           RequestDate: Date(2024, 1, 20), Status: "PendingHRApproval", ApprovalSteps: [
-             {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 22), Status: "Approved", Comments: "Nhân viên mới, cần thẻ tên"},
-             {Step: 2, ApproverRole: "HR", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
-           ],
-           Department: "Phòng Marketing", Priority: "Normal", CurrentStep: 2, TotalSteps: 2}
+        =// Sử dụng SharePoint data thay vì demo data
+        IfError(
+          // Load SharePoint data (thay thế demo data)
+          ClearCollect(colApprovalHistoryRaw, NamecardRequest);
+          ClearCollect(colApprovalHistory,
+            AddColumns(
+              AddColumns(
+                colApprovalHistoryRaw,
+                "EmployeeName", LookUp(User_1, userID = ThisRecord.userID).fullname
+              ),
+              "Department", LookUp(Department_1, departmentID = LookUp(User_1, userID = ThisRecord.userID).departmentID).name
+            )
+          ),
+          // Fallback to demo data if SharePoint fails
+          ClearCollect(colApprovalHistory,
+            {Id: 1, RequestId: 1, RequestCode: "YC-001", EmployeeName: "Nguyễn Văn An", CardType: "Standard", 
+             RequestDate: Date(2024, 1, 15), Status: "Approved", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 16), Status: "Approved", Comments: "Đồng ý cấp thẻ tên cho nhân viên"},
+               {Step: 2, ApproverRole: "HR", ApproverName: "Lê Văn Cường", ApprovalDate: Date(2024, 1, 18), Status: "Approved", Comments: "Thông tin hợp lệ, chuyển in thẻ"}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "Normal", CurrentStep: 2, TotalSteps: 2},
+            {Id: 2, RequestId: 2, RequestCode: "YC-002", EmployeeName: "Nguyễn Văn An", CardType: "Executive", 
+             RequestDate: Date(2024, 1, 10), Status: "PendingManagerApproval", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "High", CurrentStep: 1, TotalSteps: 2},
+            {Id: 3, RequestId: 3, RequestCode: "YC-003", EmployeeName: "Nguyễn Văn An", CardType: "Temporary", 
+             RequestDate: Date(2024, 1, 5), Status: "Rejected", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 8), Status: "Rejected", Comments: "Không cần thiết cho dự án ngắn hạn"}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "Low", CurrentStep: 1, TotalSteps: 2},
+            {Id: 4, RequestId: 4, RequestCode: "YC-004", EmployeeName: "Phạm Thị Dung", CardType: "Standard", 
+             RequestDate: Date(2024, 1, 20), Status: "PendingHRApproval", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 22), Status: "Approved", Comments: "Nhân viên mới, cần thẻ tên"},
+               {Step: 2, ApproverRole: "HR", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+             ],
+             Department: "Phòng Marketing", Priority: "Normal", CurrentStep: 2, TotalSteps: 2}
+          )
         );
         Set(varCurrentUser, {FullName: "Trần Thị Bình", Role: "Manager", Department: "Phòng Công nghệ thông tin"});
         Set(varSelectedApproval, Blank());
@@ -298,30 +313,7 @@ Screens:
                         Width: =Parent.Width * 0.12
                         X: =Parent.Width * 0.85
                         Y: =Parent.Height * 0.5
-                  - Clear.Filters.Button_2:
-                      Control: Classic/Button@2.2.0
-                      Properties:
-                        BorderColor: =Colors.Border
-                        Color: =Styles.Button.Secondary.Color
-                        Fill: =Styles.Button.Secondary.Fill
-                        Height: =Styles.Input.Height
-                        HoverFill: =Styles.Button.Secondary.HoverFill
-                        OnSelect: |
-                          =Reset('Status.Filter');
-                          Reset('Priority.Filter');
-                          Reset('Employee.Search');
-                          Reset('Date.From.Input');
-                          Reset('Date.To.Input');
-                          Set(varFilterStatus, "All");
-                          Set(varFilterPriority, "All");
-                          Set(varSearchEmployee, "");
-                          Set(varDateFrom, Blank());
-                          Set(varDateTo, Blank())
-                        Size: =FontSizes.Small
-                        Text: ="Xóa bộ lọc"
-                        Width: =Parent.Width * 0.12
-                        X: =Parent.Width * 0.85
-                        Y: =Parent.Height * 0.5
+
             - Approval.History.List.Section:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
@@ -342,95 +334,138 @@ Screens:
                         Width: =Parent.Width * 0.5
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.02
-                  - History.Data.Container:
-                      Control: GroupContainer@1.3.0
-                      Variant: ManualLayout
+                  - Approval.History.DataTable:
+                      Control: DataTable
                       Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Color: =Colors.TextPrimary
                         Fill: =Colors.White
+                        Font: =Font.'Segoe UI'
+                        HeadingColor: =Colors.White
+                        HeadingFill: =Colors.Primary
+                        HeadingFont: =Font.'Segoe UI'
                         Height: =Parent.Height * 0.86
+                        Items: |
+                          =Filter(colApprovalHistory,
+                            // Filter by status
+                            If(varFilterStatus = "All", true, 
+                              If(varFilterStatus = "Pending", Status in ["PendingManagerApproval", "PendingHRApproval"],
+                                If(varFilterStatus = "Approved", Status = "Approved",
+                                  If(varFilterStatus = "Rejected", Status = "Rejected", true)
+                                )
+                              )
+                            ) &&
+                            // Filter by priority  
+                            If(varFilterPriority = "All", true, Priority = varFilterPriority) &&
+                            // Filter by employee name
+                            If(IsBlank(varSearchEmployee), true, 
+                              EmployeeName in varSearchEmployee || 
+                              StartsWith(Lower(EmployeeName), Lower(varSearchEmployee))
+                            ) &&
+                            // Filter by date range
+                            If(IsBlank(varDateFrom), true, RequestDate >= varDateFrom) &&
+                            If(IsBlank(varDateTo), true, RequestDate <= varDateTo)
+                          )
+                        ShowScrollbar: =true
                         Width: =Parent.Width * 0.94
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.12
                       Children:
-                        - History.Table.Header:
-                            Control: GroupContainer@1.3.0
-                            Variant: ManualLayout
+                        - RequestCode.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
                             Properties:
-                              Fill: =Colors.BackgroundLight
-                              Height: =Parent.Height * 0.08
-                              Width: =Parent.Width
-                            Children:
-                              - Header.RequestCode:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Mã yêu cầu"
-                                    Width: =Parent.Width * 0.12
-                                    X: =Parent.Width * 0.02
-                              - Header.Employee:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Nhân viên"
-                                    Width: =Parent.Width * 0.18
-                                    X: =Parent.Width * 0.14
-                              - Header.CardType:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Loại thẻ"
-                                    Width: =Parent.Width * 0.12
-                                    X: =Parent.Width * 0.32
-                              - Header.RequestDate:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Ngày tạo"
-                                    Width: =Parent.Width * 0.12
-                                    X: =Parent.Width * 0.44
-                              - Header.Priority:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Ưu tiên"
-                                    Width: =Parent.Width * 0.1
-                                    X: =Parent.Width * 0.56
-                              - Header.Status:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Trạng thái"
-                                    Width: =Parent.Width * 0.15
-                                    X: =Parent.Width * 0.66
-                              - Header.Actions:
-                                  Control: Label@2.5.1
-                                  Properties:
-                                    Align: =Align.Center
-                                    Color: =Colors.TextPrimary
-                                    FontWeight: =FontWeight.Semibold
-                                    Height: =Parent.Height
-                                    Size: =FontSizes.Small
-                                    Text: ="Thao tác"
-                                    Width: =Parent.Width * 0.17
-                                    X: =Parent.Width * 0.81
+                              FieldDisplayName: ="Mã yêu cầu"
+                              FieldName: ="RequestCode"
+                              Order: =1
+                              Text: =ThisItem.RequestCode
+                              Width: =120
+                        - Employee.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
+                            Properties:
+                              FieldDisplayName: ="Nhân viên"
+                              FieldName: ="EmployeeName"
+                              Order: =2
+                              Text: =ThisItem.EmployeeName
+                              Width: =180
+                        - CardType.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
+                            Properties:
+                              FieldDisplayName: ="Loại thẻ"
+                              FieldName: ="CardType"
+                              Order: =3
+                              Text: |
+                                =Switch(ThisItem.CardType,
+                                  "Standard", "Tiêu chuẩn",
+                                  "Executive", "Điều hành", 
+                                  "Temporary", "Tạm thời",
+                                  ThisItem.CardType
+                                )
+                              Width: =120
+                        - RequestDate.Column:
+                            Control: DataTableColumn
+                            Variant: DateTime
+                            Properties:
+                              FieldDisplayName: ="Ngày tạo"
+                              FieldName: ="RequestDate"
+                              Order: =4
+                              Text: =Text(ThisItem.RequestDate, "dd/mm/yyyy")
+                              Width: =100
+                        - Priority.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
+                            Properties:
+                              FieldDisplayName: ="Ưu tiên"
+                              FieldName: ="Priority"
+                              Order: =5
+                              Text: |
+                                =Switch(ThisItem.Priority,
+                                  "High", "Cao",
+                                  "Normal", "Thường", 
+                                  "Low", "Thấp",
+                                  ThisItem.Priority
+                                )
+                              Width: =80
+                        - Status.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
+                            Properties:
+                              FieldDisplayName: ="Trạng thái"
+                              FieldName: ="Status"
+                              Order: =6
+                              Text: |
+                                =Switch(ThisItem.Status,
+                                  "PendingManagerApproval", "Chờ Manager phê duyệt",
+                                  "PendingHRApproval", "Chờ HR phê duyệt",
+                                  "Approved", "Đã phê duyệt",
+                                  "Rejected", "Bị từ chối",
+                                  "Không xác định"
+                                )
+                              Width: =150
+                        - Actions.Column:
+                            Control: DataTableColumn
+                            Variant: Textual
+                            Properties:
+                              FieldDisplayName: ="Thao tác"
+                              FieldName: ="Actions"
+                              Order: =7
+                              Text: ="👁 Xem chi tiết"
+                              Width: =120
+                  - DataTable.Selection.Handler:
+                      Control: Rectangle
+                      Properties:
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Height: ='Approval.History.DataTable'.Height
+                        Width: ='Approval.History.DataTable'.Width
+                        X: ='Approval.History.DataTable'.X
+                        Y: ='Approval.History.DataTable'.Y
+                        OnSelect: |
+                          =If(Not(IsBlank('Approval.History.DataTable'.Selected)),
+                            Set(varSelectedApproval, 'Approval.History.DataTable'.Selected);
+                            Set(varShowApprovalDetails, true)
+                          )
       - Approval.Details.Modal.Overlay:
           Control: Rectangle@2.3.0
           Properties:
