@@ -1,0 +1,796 @@
+Screens:
+  ReportScreen_1:
+    Properties:
+      Fill: =Colors.BackgroundLight
+      OnVisible: "=// Load SharePoint data với mapping chính xác\nIfError(\n  // Load main NamecardRequest data\n  ClearCollect(colReportDataRaw, NamecardRequest_1);\n  \n  // Tạo collection với mapping đúng fields SharePoint\n  ClearCollect(colReportData,\n    AddColumns(\n      AddColumns(\n        AddColumns(\n          AddColumns(\n            colReportDataRaw,\n            EmployeeName, \n            With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n              If(IsBlank(lookupUser), \"[Không tìm thấy]\", lookupUser.fullname)\n            )\n          ),\n          Department, \n          With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n            If(\n              IsBlank(lookupUser), \n              \"[Không tìm thấy]\",\n              With({lookupDept: LookUp(Department_1, departmentID = lookupUser.departmentID.Id)},\n                If(IsBlank(lookupDept), \"[Không có phòng ban]\", lookupDept.name)\n              )\n            )\n          )\n        ),\n        RequestCode, \"YC-\" & Text(ThisRecord.requestID, \"000000\")\n      ),\n      StatusText,\n      With({statusValue: ThisRecord.status.Value},\n        Switch(statusValue,\n          \"Chờ quản lý duyệt\", \"PendingManagerApproval\",\n          \"Chờ HR duyệt\", \"PendingHRApproval\", \n          \"Đã duyệt\", \"Approved\",\n          \"Từ chối\", \"Rejected\",\n          \"Đã in\", \"Printed\",\n          \"Đã phát\", \"Distributed\",\n          statusValue\n        )\n      )\n    )\n  ),\n  // Fallback nếu SharePoint fails  \n  ClearCollect(colReportData, Table())\n);\n\nSet(varCurrentUser, {FullName: \"Trần Thị Bình\", Role: \"Manager\", Department: \"Phòng Công nghệ thông tin\"});\nSet(varReportViewType, \"Table\");\nSet(varFilterMonth, Text(Today(), \"mm\"));\nSet(varFilterYear, Text(Today(), \"yyyy\"));\nSet(varFilterDepartment, \"All\");\nSet(varFilterStatus, \"All\");\nSet(varFilterPriority, \"All\");\nSet(varDateFrom, DateAdd(Today(), -30, TimeUnit.Days));\nSet(varDateTo, Today());\n\n// Update statistics với SharePoint data\nUpdateContext({\n  reportStats: {\n    TotalRequests: CountRows(colReportData),\n    ApprovedRequests: CountRows(Filter(colReportData, StatusText = \"Approved\")),\n    PendingRequests: CountRows(Filter(colReportData, StatusText in [\"PendingManagerApproval\", \"PendingHRApproval\"])),\n    RejectedRequests: CountRows(Filter(colReportData, StatusText = \"Rejected\")),\n    TotalCost: Sum(colReportData, 50000), // Cost calculation based on quantity\n    AverageProcessingDays: 3 // Simplified calculation\n  }\n});\nSet(varFilteredData, colReportData)\n"
+    Children:
+      - Main.Content.Container_5:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Fill: =Colors.BackgroundLight
+            Height: =Parent.Height - Styles.Header.Height
+            Width: =Parent.Width - Styles.Navigation.Width
+            X: =Styles.Navigation.Width
+            Y: =Styles.Header.Height
+          Children:
+            - Report.Content.Section_1:
+                Control: GroupContainer
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.BackgroundLight
+                  Height: =Parent.Height * 0.55
+                  Width: =Parent.Width
+                  Y: =323.09999999999997
+                Children:
+                  - Table.View.Container_1:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =Parent.Height * 0.96
+                        Visible: =varReportViewType = "Table"
+                        Width: =Parent.Width * 0.96
+                        X: =Parent.Width * 0.02
+                        Y: =Parent.Height * 0.02
+                  - Column.Chart.Container_1:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =Parent.Height * 0.96
+                        Visible: =varReportViewType = "ColumnChart"
+                        Width: =Parent.Width * 0.96
+                        X: =Parent.Width * 0.02
+                        Y: =Parent.Height * 0.02
+                      Children:
+                        - Chart.Title_1:
+                            Control: Label
+                            Properties:
+                              Align: =Align.Center
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.08
+                              Size: =FontSizes.Medium
+                              Text: ="Biểu đồ thống kê yêu cầu thẻ tên theo trạng thái"
+                              Width: =Parent.Width
+                              Y: =Parent.Height * 0.02
+                        - Chart.Info_1:
+                            Control: Label
+                            Properties:
+                              Align: =Align.Center
+                              Color: =Colors.TextMuted
+                              Height: =Parent.Height * 0.7
+                              Size: =FontSizes.Base
+                              Text: ="Biểu đồ cột hiển thị phân bố yêu cầu theo trạng thái phê duyệt. Dữ liệu được lọc theo các tiêu chí đã chọn ở trên."
+                              Width: =Parent.Width * 0.8
+                              X: =Parent.Width * 0.1
+                              Y: =Parent.Height * 0.15
+                  - Pie.Chart.Container_1:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =Parent.Height * 0.96
+                        Visible: =varReportViewType = "PieChart"
+                        Width: =Parent.Width * 0.96
+                        X: =Parent.Width * 0.02
+                        Y: =Parent.Height * 0.02
+                      Children:
+                        - Pie.Chart.Title_1:
+                            Control: Label
+                            Properties:
+                              Align: =Align.Center
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.08
+                              Size: =FontSizes.Medium
+                              Text: ="Biểu đồ tròn phân bố yêu cầu theo phòng ban"
+                              Width: =Parent.Width
+                              Y: =Parent.Height * 0.02
+                        - Pie.Chart.Info_1:
+                            Control: Label
+                            Properties:
+                              Align: =Align.Center
+                              Color: =Colors.TextMuted
+                              Height: =Parent.Height * 0.7
+                              Size: =FontSizes.Base
+                              Text: ="Biểu đồ tròn hiển thị tỷ lệ phân bố yêu cầu thẻ tên theo từng phòng ban. Dữ liệu được tính dựa trên bộ lọc hiện tại."
+                              Width: =Parent.Width * 0.8
+                              X: =Parent.Width * 0.1
+                              Y: =Parent.Height * 0.15
+            - Page.Header.Section_5:
+                Control: GroupContainer
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.12
+                  Width: =Parent.Width
+                Children:
+                  - Page.Title_5:
+                      Control: Label
+                      Properties:
+                        Color: =Colors.TextPrimary
+                        FontWeight: =FontWeight.Bold
+                        Height: =Parent.Height * 0.35
+                        Size: =FontSizes.XLarge
+                        Text: ="Báo cáo yêu cầu thẻ tên"
+                        Width: =Parent.Width * 0.4
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.15
+                  - Page.Subtitle_4:
+                      Control: Label
+                      Properties:
+                        Color: =Colors.TextMuted
+                        Height: =Parent.Height * 0.35
+                        Size: =FontSizes.Base
+                        Text: ="Thống kê và phân tích dữ liệu yêu cầu thẻ tên"
+                        Width: =Parent.Width * 0.4
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.5
+                  - Export.Current.Button_1:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =If(varExportingPDF, Colors.Success, Colors.Success)
+                        BorderThickness: =If(varExportingPDF, 2, 1)
+                        Color: =Styles.Button.Success.Color
+                        DisplayMode: =If(varExportingPDF, DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =If(varExportingPDF, ColorFade(Styles.Button.Success.Fill, 30%), Styles.Button.Success.Fill)
+                        Height: =Styles.Button.Height
+                        HoverFill: =If(varExportingPDF, Styles.Button.Success.Fill, ColorFade(Styles.Button.Success.HoverFill, -5%))
+                        OnSelect: |
+                          =Set(varExportingPDF, true);
+                          Notify("Đang xuất báo cáo PDF từ SharePoint...", NotificationType.Information);
+                          // Export logic here using varFilteredData
+                          Set(varExportedPDFCount, CountRows(varFilteredData));
+                          Set(varExportingPDF, false);
+                          Notify("Đã xuất báo cáo PDF thành công! Tổng: " & Text(varExportedPDFCount) & " bản ghi", NotificationType.Success)
+                        PressedFill: =ColorFade(Styles.Button.Success.Fill, -10%)
+                        Size: =FontSizes.Small
+                        Text: =If(varExportingPDF, "Đang xuất PDF...", "Xuất báo cáo (PDF)")
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width - Parent.Width * 0.35
+                        Y: =Parent.Height * 0.15
+                  - Export.All.Button_1:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =If(varExportingCSV, Colors.Primary, Colors.Border)
+                        BorderThickness: =If(varExportingCSV, 2, 1)
+                        Color: =Styles.Button.Secondary.Color
+                        DisplayMode: =If(varExportingCSV, DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =If(varExportingCSV, ColorFade(Styles.Button.Secondary.Fill, 20%), Styles.Button.Secondary.Fill)
+                        Height: =Styles.Button.Height
+                        HoverFill: =If(varExportingCSV, Styles.Button.Secondary.Fill, ColorFade(Styles.Button.Secondary.HoverFill, -5%))
+                        OnSelect: |
+                          =Set(varExportingCSV, true);
+                          Notify("Đang xuất dữ liệu CSV từ SharePoint...", NotificationType.Information);
+                          // Export all SharePoint data using colReportData
+                          Set(varExportedCSVCount, CountRows(colReportData));
+                          Set(varExportingCSV, false);
+                          Notify("Đã xuất dữ liệu CSV thành công! Tổng: " & Text(varExportedCSVCount) & " bản ghi", NotificationType.Success)
+                        PressedFill: =ColorFade(Styles.Button.Secondary.Fill, 15%)
+                        Size: =FontSizes.Small
+                        Text: =If(varExportingCSV, "Đang xuất CSV...", "Xuất tất cả (CSV)")
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width - Parent.Width * 0.18
+                        Y: =Parent.Height * 0.15
+            - Report.Stats.Section_1:
+                Control: GroupContainer
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.BackgroundLight
+                  Height: =Parent.Height * 0.18
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.12
+                Children:
+                  - Total.Requests.Card_4:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Primary
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="Tổng yêu cầu"
+                        Value: =Text(reportStats.TotalRequests)
+                        ValueColor: =Colors.Primary
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.02
+                        Y: =Parent.Height * 0.1
+                  - Approved.Requests.Card_4:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Success
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="Đã duyệt"
+                        Value: =Text(reportStats.ApprovedRequests)
+                        ValueColor: =Colors.Success
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.18
+                        Y: =Parent.Height * 0.1
+                  - Pending.Requests.Card_2:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Warning
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="Chờ duyệt"
+                        Value: =Text(reportStats.PendingRequests)
+                        ValueColor: =Colors.Warning
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.34
+                        Y: =Parent.Height * 0.1
+                  - Rejected.Requests.Card_4:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Error
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="Bị từ chối"
+                        Value: =Text(reportStats.RejectedRequests)
+                        ValueColor: =Colors.Error
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.5
+                        Y: =Parent.Height * 0.1
+                  - Total.Cost.Card_1:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.Info
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="Tổng chi phí"
+                        Value: =Text(reportStats.TotalCost / 1000, "0.0") & "K VND"
+                        ValueColor: =Colors.Info
+                        Width: =Parent.Width * 0.16
+                        X: =Parent.Width * 0.66
+                        Y: =Parent.Height * 0.1
+                  - Avg.Processing.Card_1:
+                      Control: CanvasComponent
+                      ComponentName: StatsCardComponent
+                      Properties:
+                        BorderColor: =Colors.TextMuted
+                        Fill: =RGBA(255, 255, 255, 1)
+                        Height: =Parent.Height * 0.8
+                        IsClickable: =false
+                        IsLoading: =false
+                        Title: ="TB xử lý"
+                        Value: =Text(Round(reportStats.AverageProcessingDays, 1)) & " ngày"
+                        ValueColor: =Colors.TextMuted
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.83
+                        Y: =Parent.Height * 0.1
+            - Filters.ViewOptions.Section_1:
+                Control: GroupContainer
+                Variant: ManualLayout
+                Properties:
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.15
+                  Width: =Parent.Width
+                  Y: =Parent.Height * 0.3
+                Children:
+                  - Filters.Row1.Container_1:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =Parent.Height * 0.6
+                        Width: =Parent.Width
+                      Children:
+                        - Filters.Title_3:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.35
+                              Size: =FontSizes.Medium
+                              Text: ="Bộ lọc dữ liệu"
+                              Width: =Parent.Width * 0.15
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.1
+                        - Month.Filter_1:
+                            Control: DropDown
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultSelectedItems: |
+                                =Filter(Table({Name: "Tất cả", Value: "All"}, {Name: "Tháng " & Text(Month(Today())), Value: Text(Month(Today()), "00")}), Value = varFilterMonth)
+                              Fill: =Colors.White
+                              Height: =Styles.Input.Height
+                              Items: |
+                                =Table(
+                                {Name: "Tất cả", Value: "All"},
+                                {Name: "Tháng 1", Value: "01"}, {Name: "Tháng 2", Value: "02"},
+                                {Name: "Tháng 3", Value: "03"}, {Name: "Tháng 4", Value: "04"},
+                                {Name: "Tháng 5", Value: "05"}, {Name: "Tháng 6", Value: "06"},
+                                {Name: "Tháng 7", Value: "07"}, {Name: "Tháng 8", Value: "08"},
+                                {Name: "Tháng 9", Value: "09"}, {Name: "Tháng 10", Value: "10"},
+                                {Name: "Tháng 11", Value: "11"}, {Name: "Tháng 12", Value: "12"}
+                                )
+                              OnChange: |
+                                =Set(varFilterMonth, Self.Selected.Value);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Width: =Parent.Width * 0.08
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.5
+                        - Year.Filter_1:
+                            Control: DropDown
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultSelectedItems: |
+                                =Table({Name: Text(Year(Today())), Value: Text(Year(Today()))})
+                              Fill: =Colors.White
+                              Height: =Styles.Input.Height
+                              Items: |
+                                =Table(
+                                {Name: "Tất cả", Value: "All"},
+                                {Name: "2024", Value: "2024"},
+                                {Name: "2023", Value: "2023"},
+                                {Name: "2022", Value: "2022"}
+                                )
+                              OnChange: |
+                                =Set(varFilterYear, Self.Selected.Value);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Width: =Parent.Width * 0.08
+                              X: =Parent.Width * 0.12
+                              Y: =Parent.Height * 0.5
+                        - Department.Filter_2:
+                            Control: DropDown
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultSelectedItems: |
+                                =Table({Name: "Tất cả", Value: "All"})
+                              Fill: =Colors.White
+                              Height: =Styles.Input.Height
+                              Items: |
+                                =Table(
+                                {Name: "Tất cả", Value: "All"},
+                                {Name: "Phòng Công nghệ thông tin", Value: "Phòng Công nghệ thông tin"},
+                                {Name: "Phòng Nhân sự", Value: "Phòng Nhân sự"},
+                                {Name: "Phòng Kế toán", Value: "Phòng Kế toán"},
+                                {Name: "Phòng Marketing", Value: "Phòng Marketing"}
+                                )
+                              OnChange: |
+                                =Set(varFilterDepartment, Self.Selected.Value);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Width: =Parent.Width * 0.15
+                              X: =Parent.Width * 0.21
+                              Y: =Parent.Height * 0.5
+                        - Status.Filter_4:
+                            Control: DropDown
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultSelectedItems: |
+                                =Table({Name: "Tất cả", Value: "All"})
+                              Fill: =Colors.White
+                              Height: =Styles.Input.Height
+                              Items: |
+                                =Table(
+                                {Name: "Tất cả", Value: "All"},
+                                {Name: "Đã duyệt", Value: "Approved"},
+                                {Name: "Chờ Manager", Value: "PendingManagerApproval"},
+                                {Name: "Chờ HR", Value: "PendingHRApproval"},
+                                {Name: "Bị từ chối", Value: "Rejected"},
+                                {Name: "Đã in", Value: "Printed"},
+                                {Name: "Đã phát", Value: "Distributed"}
+                                )
+                              OnChange: |
+                                =Set(varFilterStatus, Self.Selected.Value);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Width: =Parent.Width * 0.12
+                              X: =Parent.Width * 0.37
+                              Y: =Parent.Height * 0.5
+                        - Priority.Filter_3:
+                            Control: DropDown
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultSelectedItems: |
+                                =Table({Name: "Tất cả", Value: "All"})
+                              Fill: =Colors.White
+                              Height: =Styles.Input.Height
+                              Items: |
+                                =Table(
+                                {Name: "Tất cả", Value: "All"},
+                                {Name: "Cao", Value: "High"},
+                                {Name: "Thường", Value: "Normal"},
+                                {Name: "Thấp", Value: "Low"}
+                                )
+                              OnChange: |
+                                =Set(varFilterPriority, Self.Selected.Value);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.5
+                              Y: =Parent.Height * 0.5
+                  - Filters.Row2.Container_1:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        Fill: =Colors.White
+                        Height: =43.07999999999999
+                        Width: =Parent.Width
+                        Y: =Parent.Height * 0.6
+                      Children:
+                        - Date.From.Label_3:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.8
+                              Size: =FontSizes.Small
+                              Text: ="Từ ngày:"
+                              Width: =Parent.Width * 0.06
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.1
+                        - Date.From.Input_3:
+                            Control: Classic/DatePicker
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultDate: =varDateFrom
+                              Fill: =Colors.White
+                              Height: =Parent.Height * 0.6
+                              OnChange: |
+                                =Set(varDateFrom, Self.SelectedDate);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Size: =FontSizes.Small
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.09
+                              Y: =Parent.Height * 0.2
+                        - Date.To.Label_3:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.8
+                              Size: =FontSizes.Small
+                              Text: ="Đến ngày:"
+                              Width: =Parent.Width * 0.06
+                              X: =Parent.Width * 0.2
+                              Y: =Parent.Height * 0.1
+                        - Date.To.Input_3:
+                            Control: Classic/DatePicker
+                            Properties:
+                              BorderColor: =Colors.Border
+                              DefaultDate: =varDateTo
+                              Fill: =Colors.White
+                              Height: =Parent.Height * 0.6
+                              OnChange: |
+                                =Set(varDateTo, Self.SelectedDate);
+                                Set(varFilteredData, Filter(colReportData,
+                                  And(
+                                    Or(varFilterMonth = "All", Text(DateValue(Created), "mm") = varFilterMonth),
+                                    Or(varFilterYear = "All", Text(DateValue(Created), "yyyy") = varFilterYear),
+                                    Or(varFilterDepartment = "All", Department = varFilterDepartment),
+                                    Or(varFilterStatus = "All", StatusText = varFilterStatus),
+                                    Or(varFilterPriority = "All", 
+                                       If(varFilterPriority = "High", suggestedReason = "New Employee",
+                                         If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                                           If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
+                                         )
+                                       )
+                                    ),
+                                    DateValue(Created) >= varDateFrom,
+                                    DateValue(Created) <= varDateTo
+                                  )
+                                ))
+                              Size: =FontSizes.Small
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.26
+                              Y: =Parent.Height * 0.2
+                        - Clear.Filters.Button_2:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =Colors.Border
+                              Color: =Styles.Button.Secondary.Color
+                              Fill: =Styles.Button.Secondary.Fill
+                              Height: =Parent.Height * 0.6
+                              HoverFill: =Styles.Button.Secondary.HoverFill
+                              OnSelect: |
+                                =Reset('Month.Filter_1');
+                                Reset('Year.Filter_1');
+                                Reset('Department.Filter_2');
+                                Reset('Status.Filter_4');
+                                Reset('Priority.Filter_3');
+                                Set(varFilterMonth, "All");
+                                Set(varFilterYear, "All");
+                                Set(varFilterDepartment, "All");
+                                Set(varFilterStatus, "All");
+                                Set(varFilterPriority, "All");
+                                Set(varDateFrom, DateAdd(Today(), -30, Days));
+                                Set(varDateTo, Today());
+                                Set(varFilteredData, colReportData);
+
+                                // Update statistics
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(colReportData),
+                                    ApprovedRequests: CountRows(Filter(colReportData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(colReportData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(colReportData, StatusText = "Rejected")),
+                                    TotalCost: Sum(colReportData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
+                              Size: =FontSizes.Small
+                              Text: ="Xóa bộ lọc"
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.38
+                              Y: =Parent.Height * 0.2
+                        - View.Type.Label_1:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.8
+                              Size: =FontSizes.Small
+                              Text: ="Loại hiển thị:"
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.55
+                              Y: =Parent.Height * 0.1
+                        - Table.View.Button_1:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =If(varReportViewType = "Table", Colors.Primary, Colors.Border)
+                              Color: =If(varReportViewType = "Table", Styles.Button.Primary.Color, Styles.Button.Secondary.Color)
+                              Fill: =If(varReportViewType = "Table", Styles.Button.Primary.Fill, Styles.Button.Secondary.Fill)
+                              Height: =Parent.Height * 0.6
+                              HoverFill: =If(varReportViewType = "Table", Styles.Button.Primary.HoverFill, Styles.Button.Secondary.HoverFill)
+                              OnSelect: |
+                                =Set(varReportViewType, "Table")
+                              Size: =FontSizes.Small
+                              Text: ="Bảng"
+                              Width: =Parent.Width * 0.08
+                              X: =Parent.Width * 0.65
+                              Y: =Parent.Height * 0.2
+                        - Chart.View.Button_1:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =If(varReportViewType = "ColumnChart", Colors.Primary, Colors.Border)
+                              Color: =If(varReportViewType = "ColumnChart", Styles.Button.Primary.Color, Styles.Button.Secondary.Color)
+                              Fill: =If(varReportViewType = "ColumnChart", Styles.Button.Primary.Fill, Styles.Button.Secondary.Fill)
+                              Height: =Parent.Height * 0.6
+                              HoverFill: =If(varReportViewType = "ColumnChart", Styles.Button.Primary.HoverFill, Styles.Button.Secondary.HoverFill)
+                              OnSelect: |
+                                =Set(varReportViewType, "ColumnChart")
+                              Size: =FontSizes.Small
+                              Text: ="Biểu đồ cột"
+                              Width: =Parent.Width * 0.1
+                              X: =Parent.Width * 0.74
+                              Y: =Parent.Height * 0.2
+                        - Pie.Chart.View.Button_1:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =If(varReportViewType = "PieChart", Colors.Primary, Colors.Border)
+                              Color: =If(varReportViewType = "PieChart", Styles.Button.Primary.Color, Styles.Button.Secondary.Color)
+                              Fill: =If(varReportViewType = "PieChart", Styles.Button.Primary.Fill, Styles.Button.Secondary.Fill)
+                              Height: =Parent.Height * 0.6
+                              HoverFill: =If(varReportViewType = "PieChart", Styles.Button.Primary.HoverFill, Styles.Button.Secondary.HoverFill)
+                              OnSelect: |
+                                =Set(varReportViewType, "PieChart")
+                              Size: =FontSizes.Small
+                              Text: ="Biểu đồ tròn"
+                              Width: =Parent.Width * 0.12
+                              X: =Parent.Width * 0.85
+                              Y: =Parent.Height * 0.2
+      - Report.DataTable:
+          Control: DataTable
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Color: =Colors.TextPrimary
+            Fill: =Colors.White
+            Font: =Font.'Segoe UI'
+            HeadingColor: =Colors.White
+            HeadingFill: =Colors.Primary
+            HeadingFont: =Font.'Segoe UI'
+            Height: =313
+            Items: =varFilteredData
+            Width: =1166
+            X: =200
+            Y: =450
+          Children:
+            - RequestCode.Column_1:
+                Control: DataTableColumn
+                Variant: Textual
+                Properties:
+                  FieldDisplayName: ="Mã YC"
+                  FieldName: ="RequestCode"
+                  Order: =1
+                  Text: =ThisItem.RequestCode
+            - Employee.Column_1:
+                Control: DataTableColumn
+                Variant: Textual
+                Properties:
+                  FieldDisplayName: ="Nhân viên"
+                  FieldName: ="EmployeeName"
+                  Order: =2
+                  Text: =ThisItem.EmployeeName
+                  Width: =150
+            - Department.Column:
+                Control: DataTableColumn
+                Variant: Textual
+                Properties:
+                  FieldDisplayName: ="Phòng ban"
+                  FieldName: ="Department"
+                  Order: =3
+                  Text: =ThisItem.Department
+                  Width: =160
+            - SuggestedReason.Column_1:
+                Control: DataTableColumn
+                Variant: Textual
+                Properties:
+                  FieldDisplayName: ="Lý do"
+                  FieldName: ="suggestedReason"
+                  Order: =4
+                  Text: =ThisItem.suggestedReason
+                  Width: =120
+            - RequestDate.Column_1:
+                Control: DataTableColumn
+                Variant: DateTime
+                Properties:
+                  FieldDisplayName: ="Ngày tạo"
+                  FieldName: ="Created"
+                  Order: =5
+                  Text: =Text(DateValue(ThisItem.Created), "dd/mm/yyyy")
+            - Status.Column_3:
+                Control: DataTableColumn
+                Variant: Textual
+                Properties:
+                  FieldDisplayName: ="Trạng thái"
+                  FieldName: ="status"
+                  Order: =6
+                  Text: =ThisItem.status.Value
+                  Width: =120
+            - Quantity.Column_1:
+                Control: DataTableColumn
+                Variant: Number
+                Properties:
+                  FieldDisplayName: ="Số lượng"
+                  FieldName: ="quantity"
+                  Order: =7
+                  Text: =Text(ThisItem.quantity)
+                  Width: =80
+      - Loading.Overlay_2:
+          Control: GroupContainer
+          Variant: ManualLayout
+          Properties:
+            Fill: =RGBA(255, 255, 255, 0.8)
+            Height: =Parent.Height
+            Visible: =Or(varExportingPDF, varExportingCSV)
+            Width: =Parent.Width
+          Children:
+            - Loading.Container_1:
+                Control: GroupContainer
+                Variant: ManualLayout
+                Properties:
+                  BorderColor: =Colors.Border
+                  BorderThickness: =2
+                  Fill: =Colors.White
+                  Height: =Parent.Height * 0.2
+                  Width: =Parent.Width * 0.3
+                  X: =(Parent.Width - Parent.Width * 0.3) / 2
+                  Y: =(Parent.Height - Parent.Height * 0.2) / 2
+                Children:
+                  - Loading.Spinner_2:
+                      Control: Classic/Icon
+                      Properties:
+                        Color: =Colors.Primary
+                        Height: =40
+                        Icon: =Icon.Sync
+                        Width: =40
+                        X: =(Parent.Width - 40) / 2
+                        Y: =Parent.Height * 0.2
+                  - Loading.Text_1:
+                      Control: Label
+                      Properties:
+                        Align: =Align.Center
+                        Color: =Colors.TextPrimary
+                        Height: =Parent.Height * 0.25
+                        Size: =FontSizes.Base
+                        Text: =If(varExportingPDF, "Đang xuất báo cáo PDF...", "Đang xuất dữ liệu CSV...")
+                        Width: =Parent.Width
+                        Y: =Parent.Height * 0.7

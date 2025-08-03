@@ -13,16 +13,9 @@ Screens:
               userID = varCurrentEmployee.userID
             )
           ),
-          // Fallback to demo data if SharePoint unavailable
-          ClearCollect(colNameCardRequests,
-            {requestID: 1, userID: "U001", quantity: 1, suggestedReason: "Thẻ tên cho trưởng phòng mới", 
-             note: "Thẻ tên executive cho sự kiện quan trọng", status: "Đã duyệt", printNote: "Đã in"},
-            {requestID: 2, userID: "U001", quantity: 1, suggestedReason: "Thẻ tên executive cho sự kiện quan trọng", 
-             note: "Cần in gấp", status: "Chờ duyệt", printNote: ""},
-            {requestID: 3, userID: "U001", quantity: 2, suggestedReason: "Thẻ tạm thời cho dự án", 
-             note: "Dự án kéo dài 3 tháng", status: "Từ chối", printNote: ""}
-          );
-          Notify("Đang sử dụng dữ liệu demo - không thể kết nối SharePoint", NotificationType.Warning)
+          // Fallback to empty collection if SharePoint unavailable
+          ClearCollect(colNameCardRequests);
+          Notify("Đang sử dụng dữ liệu offline - không thể kết nối SharePoint", NotificationType.Warning)
         );
         
         Set(varCurrentEmployee, {userID: "U001", fullname: "Nguyễn Văn An", departmentID: 1});
@@ -37,6 +30,12 @@ Screens:
         Set(varContextMenuX, 0);
         Set(varContextMenuY, 0);
         Set(varLoadingRequests, false);
+        
+        // Initialize additional context variables for request details
+        UpdateContext({
+          requestUserInfo: Blank(),
+          requestDepartment: Blank()
+        });
         
         UpdateContext({
           statsData: {
@@ -366,8 +365,18 @@ Screens:
                                     Fill: =RGBA(0, 0, 0, 0)
                                     HoverFill: =Colors.BackgroundLight
                                     OnSelect: |
-                                      =Set(varShowRequestDetails, true);
-                                      Set(varShowContextMenu, false)
+                                      =Set(varSelectedRequest, varSelectedRequest);
+                                      Set(varShowRequestDetails, true);
+                                      Set(varShowContextMenu, false);
+                                      
+                                      // Load additional user and department info
+                                      IfError(
+                                        UpdateContext({
+                                          requestUserInfo: LookUp(User_1, userID = varSelectedRequest.userID),
+                                          requestDepartment: LookUp(Department_1, departmentID = LookUp(User_1, userID = varSelectedRequest.userID, departmentID))
+                                        }),
+                                        Notify("Không thể tải thông tin chi tiết", NotificationType.Warning)
+                                      )
                                     Size: =FontSizes.Base
                                     Text: ="👁 Xem chi tiết"
                                     Width: =Parent.Width
@@ -702,102 +711,271 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.12
                 Children:
-                      - Details.Info.Container:
-                          Control: GroupContainer
-                          Variant: ManualLayout
-                          Properties:
-                            BorderColor: =Colors.BorderLight
-                            BorderThickness: =1
-                            Fill: =Colors.BackgroundLight
-                            Height: =Parent.Height * 0.9
-                            Width: =Parent.Width * 0.9
-                            X: =Parent.Width * 0.05
-                            Y: =Parent.Height * 0.05
-                          Children:
-                            - Request.ID.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  FontWeight: =FontWeight.Bold
-                                  Height: =Parent.Height * 0.1
-                                  Size: =FontSizes.Base
-                                  Text: |
-                                    =Concatenate("Mã yêu cầu: YC-", Text(varSelectedRequest.requestID, "000"))
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.05
-                            - Quantity.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  Height: =Parent.Height * 0.08
-                                  Size: =FontSizes.Base
-                                  Text: =Concatenate("Số lượng: ", Text(varSelectedRequest.quantity))
-                                  Width: =Parent.Width * 0.45
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.18
-                            - Status.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  Height: =Parent.Height * 0.08
-                                  Size: =FontSizes.Base
-                                  Text: =Concatenate("Trạng thái: ", varSelectedRequest.status)
-                                  Width: =Parent.Width * 0.45
-                                  X: =Parent.Width * 0.5
-                                  Y: =Parent.Height * 0.18
-                            - SuggestedReason.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  Height: =Parent.Height * 0.15
-                                  Size: =FontSizes.Base
-                                  Text: =Concatenate("Lý do cấp: ", varSelectedRequest.suggestedReason)
-                                  VerticalAlign: =VerticalAlign.Top
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.28
-                            - Notes.Label.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  FontWeight: =FontWeight.Semibold
-                                  Height: =Parent.Height * 0.08
-                                  Size: =FontSizes.Base
-                                  Text: ="Ghi chú:"
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.45
-                            - Notes.Content.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextMuted
-                                  Height: =Parent.Height * 0.15
-                                  Size: =FontSizes.Base
-                                  Text: =If(IsBlank(varSelectedRequest.note), "Không có ghi chú", varSelectedRequest.note)
-                                  VerticalAlign: =VerticalAlign.Top
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.53
-                            - PrintNote.Label.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextPrimary
-                                  FontWeight: =FontWeight.Semibold
-                                  Height: =Parent.Height * 0.08
-                                  Size: =FontSizes.Base
-                                  Text: ="Ghi chú in ấn:"
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.7
-                            - PrintNote.Content.Detail:
-                                Control: Label
-                                Properties:
-                                  Color: =Colors.TextMuted
-                                  Height: =Parent.Height * 0.15
-                                  Size: =FontSizes.Base
-                                  Text: =If(IsBlank(varSelectedRequest.printNote), "Chưa có ghi chú in ấn", varSelectedRequest.printNote)
-                                  VerticalAlign: =VerticalAlign.Top
-                                  Width: =Parent.Width * 0.9
-                                  X: =Parent.Width * 0.05
-                                  Y: =Parent.Height * 0.78
+                  - Request.Info.Section:
+                      Control: GroupContainer
+                      Variant: ManualLayout
+                      Properties:
+                        BorderColor: =Colors.BorderLight
+                        BorderThickness: =1
+                        Fill: =Colors.BackgroundLight
+                        Height: =Parent.Height * 0.85
+                        Width: =Parent.Width * 0.94
+                        X: =Parent.Width * 0.03
+                        Y: =Parent.Height * 0.02
+                      Children:
+                        - Info.Section.Title:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              FontWeight: =FontWeight.Bold
+                              Height: =Parent.Height * 0.08
+                              Size: =FontSizes.Medium
+                              Text: ="Thông tin chi tiết yêu cầu"
+                              Width: =Parent.Width * 0.6
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.02
+                        
+                        # Thông tin người yêu cầu
+                        - Employee.Name.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Họ và tên:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.12
+                        - Employee.Name.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =LookUp(User_1, userID = varSelectedRequest.userID, fullname)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.25
+                              Y: =Parent.Height * 0.12
+                              
+                        - Employee.Email.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Email:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.55
+                              Y: =Parent.Height * 0.12
+                        - Employee.Email.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =LookUp(User_1, userID = varSelectedRequest.userID, email)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.7
+                              Y: =Parent.Height * 0.12
+                              
+                        # Phòng ban và chức vụ
+                        - Department.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Phòng ban:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.22
+                        - Department.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =LookUp(Department_1, departmentID = LookUp(User_1, userID = varSelectedRequest.userID, departmentID), name)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.25
+                              Y: =Parent.Height * 0.22
+                              
+                        - JobTitle.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Chức vụ:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.55
+                              Y: =Parent.Height * 0.22
+                        - JobTitle.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =LookUp(User_1, userID = varSelectedRequest.userID, jobTitle)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.7
+                              Y: =Parent.Height * 0.22
+                              
+                        # Thông tin liên lạc
+                        - Phone.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Số điện thoại:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.32
+                        - Phone.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =LookUp(User_1, userID = varSelectedRequest.userID, phone)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.25
+                              Y: =Parent.Height * 0.32
+                              
+                        # Thông tin yêu cầu
+                        - Quantity.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Số lượng namecard:"
+                              Width: =Parent.Width * 0.2
+                              X: =Parent.Width * 0.55
+                              Y: =Parent.Height * 0.32
+                        - Quantity.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =Text(varSelectedRequest.quantity)
+                              Width: =Parent.Width * 0.25
+                              X: =Parent.Width * 0.7
+                              Y: =Parent.Height * 0.32
+                              
+                        # Lý do đề xuất
+                        - Reason.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Lý do đề xuất:"
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.42
+                        - Reason.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.12
+                              Size: =FontSizes.Small
+                              Text: =varSelectedRequest.suggestedReason
+                              VerticalAlign: =VerticalAlign.Top
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.48
+                              
+                        # Ghi chú
+                        - Note.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Ghi chú:"
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.62
+                        - Note.Value:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.1
+                              Size: =FontSizes.Small
+                              Text: =If(IsBlank(varSelectedRequest.note), "Không có ghi chú", varSelectedRequest.note)
+                              VerticalAlign: =VerticalAlign.Top
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.68
+                              
+                        # Trạng thái hiện tại
+                        - Status.Label:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextSecondary
+                              FontWeight: =FontWeight.Semibold
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: ="Trạng thái hiện tại:"
+                              Width: =Parent.Width * 0.3
+                              X: =Parent.Width * 0.05
+                              Y: =Parent.Height * 0.8
+                        - Status.Badge:
+                            Control: Label
+                            Properties:
+                              BorderColor: =Switch(varSelectedRequest.status,
+                                "Chờ duyệt", RGBA(255, 193, 7, 1),
+                                "Đã duyệt", RGBA(40, 167, 69, 1),
+                                "Từ chối", RGBA(220, 53, 69, 1),
+                                "Đã in", RGBA(23, 162, 184, 1),
+                                "Đã phát", RGBA(108, 117, 125, 1),
+                                RGBA(108, 117, 125, 1))
+                              BorderThickness: =1
+                              Color: =Switch(varSelectedRequest.status,
+                                "Chờ duyệt", RGBA(133, 100, 4, 1),
+                                "Đã duyệt", RGBA(255, 255, 255, 1),
+                                "Từ chối", RGBA(255, 255, 255, 1),
+                                "Đã in", RGBA(255, 255, 255, 1),
+                                "Đã phát", RGBA(255, 255, 255, 1),
+                                RGBA(255, 255, 255, 1))
+                              Fill: =Switch(varSelectedRequest.status,
+                                "Chờ duyệt", RGBA(255, 243, 205, 1),
+                                "Đã duyệt", RGBA(40, 167, 69, 1),
+                                "Từ chối", RGBA(220, 53, 69, 1),
+                                "Đã in", RGBA(23, 162, 184, 1),
+                                "Đã phát", RGBA(108, 117, 125, 1),
+                                RGBA(108, 117, 125, 1))
+                              Height: =Parent.Height * 0.06
+                              Size: =FontSizes.Small
+                              Text: =varSelectedRequest.status
+                              Width: =Parent.Width * 0.15
+                              X: =Parent.Width * 0.35
+                              Y: =Parent.Height * 0.8
+                              
+                  # Button đóng
+                  - Close.Details.Button:
+                      Control: Classic/Button
+                      Properties:
+                        BorderColor: =Colors.Border
+                        Color: =Colors.TextPrimary
+                        Fill: =Colors.BackgroundLight
+                        Height: =Parent.Height * 0.08
+                        HoverFill: =RGBA(108, 117, 125, 0.1)
+                        OnSelect: |
+                          =Set(varShowRequestDetails, false)
+                        Size: =FontSizes.Medium
+                        Text: ="Đóng"
+                        Width: =Parent.Width * 0.15
+                        X: =Parent.Width * 0.825
+                        Y: =Parent.Height * 0.9

@@ -1,0 +1,28 @@
+App As appinfo:
+  BackEnabled: =false
+  OnStart: |-
+    =// Initialize StatusColors for use across the app
+    Set(
+      StatusColors,
+      {
+        Approved: Colors.Success,
+        ApprovedBg: ColorFade(Colors.Success, 90%),
+        ApprovedText: Colors.Success,
+        
+        Rejected: Colors.Error,
+        RejectedBg: ColorFade(Colors.Error, 90%),
+        RejectedText: Colors.Error,
+        
+        Pending: Colors.Warning,
+        PendingBg: ColorFade(Colors.Warning, 90%),
+        PendingText: Colors.Warning,
+        
+        InProgress: Colors.Info,
+        InProgressBg: ColorFade(Colors.Info, 90%),
+        InProgressText: Colors.Info
+      }
+    );
+    
+    // Initialize other global variables
+    Set(varCurrentScreen, "Dashboard");
+    Set(varAppVersion, "1.0.0");
