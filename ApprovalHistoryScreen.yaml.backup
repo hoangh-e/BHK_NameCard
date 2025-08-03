@@ -3,9 +3,9 @@ Screens:
     Properties:
       Fill: =Colors.BackgroundLight
       OnVisible: |
-        =// Sử dụng SharePoint data
+        =// Sử dụng SharePoint data thay vì demo data
         IfError(
-          // Load SharePoint data
+          // Load SharePoint data (thay thế demo data)
           ClearCollect(colApprovalHistoryRaw, NamecardRequest);
           ClearCollect(colApprovalHistory,
             AddColumns(
@@ -16,8 +16,31 @@ Screens:
               Department, LookUp(Department_1, departmentID = LookUp(User_1, userID = ThisRecord.userID).departmentID.Value).name
             )
           ),
-          // Fallback to empty data if SharePoint fails
-          ClearCollect(colApprovalHistory, Table())
+          // Fallback to demo data if SharePoint fails
+          ClearCollect(colApprovalHistory,
+            {Id: 1, RequestId: 1, RequestCode: "YC-001", EmployeeName: "Nguyễn Văn An", CardType: "Standard", 
+             RequestDate: Date(2024, 1, 15), Status: "Approved", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 16), Status: "Approved", Comments: "Đồng ý cấp thẻ tên cho nhân viên"},
+               {Step: 2, ApproverRole: "HR", ApproverName: "Lê Văn Cường", ApprovalDate: Date(2024, 1, 18), Status: "Approved", Comments: "Thông tin hợp lệ, chuyển in thẻ"}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "Normal", CurrentStep: 2, TotalSteps: 2},
+            {Id: 2, RequestId: 2, RequestCode: "YC-002", EmployeeName: "Nguyễn Văn An", CardType: "Executive", 
+             RequestDate: Date(2024, 1, 10), Status: "PendingManagerApproval", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "High", CurrentStep: 1, TotalSteps: 2},
+            {Id: 3, RequestId: 3, RequestCode: "YC-003", EmployeeName: "Nguyễn Văn An", CardType: "Temporary", 
+             RequestDate: Date(2024, 1, 5), Status: "Rejected", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 8), Status: "Rejected", Comments: "Không cần thiết cho dự án ngắn hạn"}
+             ],
+             Department: "Phòng Công nghệ thông tin", Priority: "Low", CurrentStep: 1, TotalSteps: 2},
+            {Id: 4, RequestId: 4, RequestCode: "YC-004", EmployeeName: "Phạm Thị Dung", CardType: "Standard", 
+             RequestDate: Date(2024, 1, 20), Status: "PendingHRApproval", ApprovalSteps: [
+               {Step: 1, ApproverRole: "Manager", ApproverName: "Trần Thị Bình", ApprovalDate: Date(2024, 1, 22), Status: "Approved", Comments: "Nhân viên mới, cần thẻ tên"},
+               {Step: 2, ApproverRole: "HR", ApproverName: "", ApprovalDate: Blank(), Status: "Pending", Comments: ""}
+             ],
+             Department: "Phòng Marketing", Priority: "Normal", CurrentStep: 2, TotalSteps: 2}
+          )
         );
         Set(varCurrentUser, {FullName: "Trần Thị Bình", Role: "Manager", Department: "Phòng Công nghệ thông tin"});
         Set(varSelectedApproval, Blank());
@@ -37,7 +60,7 @@ Screens:
         })
     Children:
       - Main.Content.Container_4:
-          Control: GroupContainer
+          Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
             Fill: =Colors.BackgroundLight
@@ -47,7 +70,7 @@ Screens:
             Y: =Styles.Header.Height
           Children:
             - Page.Header.Section_4:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -55,7 +78,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Page.Title_4:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Bold
@@ -66,7 +89,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.15
                   - Page.Subtitle_3:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextMuted
                         Height: =Parent.Height * 0.35
@@ -76,7 +99,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.5
             - Summary.Stats.Section_1:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.BackgroundLight
@@ -145,7 +168,7 @@ Screens:
                         X: =Parent.Width * 0.75
                         Y: =Parent.Height * 0.1
             - Filters.Section_1:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -154,7 +177,7 @@ Screens:
                   Y: =Parent.Height * 0.3
                 Children:
                   - Filters.Title_2:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Bold
@@ -165,7 +188,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.1
                   - Status.Filter_3:
-                      Control: DropDown
+                      Control: DropDown@0.0.45
                       Properties:
                         BorderColor: =Colors.Border
                         DefaultSelectedItems: |
@@ -185,7 +208,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.5
                   - Priority.Filter_2:
-                      Control: DropDown
+                      Control: DropDown@0.0.45
                       Properties:
                         BorderColor: =Colors.Border
                         DefaultSelectedItems: |
@@ -205,7 +228,7 @@ Screens:
                         X: =Parent.Width * 0.2
                         Y: =Parent.Height * 0.5
                   - Employee.Search_1:
-                      Control: Classic/TextInput
+                      Control: Classic/TextInput@2.3.2
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Colors.TextPrimary
@@ -221,7 +244,7 @@ Screens:
                         X: =Parent.Width * 0.34
                         Y: =Parent.Height * 0.5
                   - Date.From.Label_2:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
                         Height: =Parent.Height * 0.25
@@ -231,7 +254,7 @@ Screens:
                         X: =Parent.Width * 0.56
                         Y: =Parent.Height * 0.2
                   - Date.From.Input_2:
-                      Control: Classic/DatePicker
+                      Control: Classic/DatePicker@2.6.0
                       Properties:
                         BorderColor: =Colors.Border
                         DefaultDate: =Blank()
@@ -244,7 +267,7 @@ Screens:
                         X: =Parent.Width * 0.56
                         Y: =Parent.Height * 0.5
                   - Date.To.Label_2:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
                         Height: =Parent.Height * 0.25
@@ -254,7 +277,7 @@ Screens:
                         X: =Parent.Width * 0.7
                         Y: =Parent.Height * 0.2
                   - Date.To.Input_2:
-                      Control: Classic/DatePicker
+                      Control: Classic/DatePicker@2.6.0
                       Properties:
                         BorderColor: =Colors.Border
                         DefaultDate: =Blank()
@@ -267,7 +290,7 @@ Screens:
                         X: =Parent.Width * 0.7
                         Y: =Parent.Height * 0.5
                   - Clear.Filters.Button_3:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Styles.Button.Secondary.Color
@@ -291,7 +314,7 @@ Screens:
                         X: =Parent.Width * 0.85
                         Y: =Parent.Height * 0.5
             - Approval.History.List.Section_1:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.BackgroundLight
@@ -300,7 +323,7 @@ Screens:
                   Y: =Parent.Height * 0.42
                 Children:
                   - History.Section.Title_1:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Bold
@@ -311,7 +334,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.02
                   - DataTable.Selection.Handler_1:
-                      Control: Rectangle
+                      Control: Rectangle@2.3.0
                       Properties:
                         Fill: =RGBA(0, 0, 0, 0)
                         Height: =416.44
@@ -322,7 +345,7 @@ Screens:
                           )
                         Width: =1166
       - Approval.History.DataTable:
-          Control: DataTable
+          Control: DataTable@1.0.3
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
             Color: =Colors.TextPrimary
@@ -358,7 +381,7 @@ Screens:
             Y: =400
           Children:
             - RequestCode.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Mã yêu cầu"
@@ -367,7 +390,7 @@ Screens:
                   Text: =ThisItem.RequestCode
                   Width: =120
             - Employee.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Nhân viên"
@@ -376,7 +399,7 @@ Screens:
                   Text: =ThisItem.EmployeeName
                   Width: =180
             - CardType.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Loại thẻ"
@@ -391,7 +414,7 @@ Screens:
                     )
                   Width: =120
             - RequestDate.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: DateTime
                 Properties:
                   FieldDisplayName: ="Ngày tạo"
@@ -399,7 +422,7 @@ Screens:
                   Order: =4
                   Text: =Text(ThisItem.RequestDate, "dd/mm/yyyy")
             - Priority.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Ưu tiên"
@@ -414,7 +437,7 @@ Screens:
                     )
                   Width: =80
             - Status.Column_1:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Trạng thái"
@@ -430,7 +453,7 @@ Screens:
                     )
                   Width: =150
             - Actions.Column:
-                Control: DataTableColumn
+                Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Thao tác"
@@ -439,7 +462,7 @@ Screens:
                   Text: "=\"\U0001F441 Xem chi tiết\""
                   Width: =120
       - Approval.Details.Modal.Overlay_1:
-          Control: Rectangle
+          Control: Rectangle@2.3.0
           Properties:
             Fill: =Styles.Modal.Overlay
             Height: =Parent.Height
@@ -448,7 +471,7 @@ Screens:
             Visible: =varShowApprovalDetails
             Width: =Parent.Width
       - Approval.Details.Modal_1:
-          Control: GroupContainer
+          Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
             Fill: =Colors.White
@@ -459,7 +482,7 @@ Screens:
             Y: =If(varShowApprovalDetails, (Parent.Height - Parent.Height * 0.8) / 2, -Parent.Height)
           Children:
             - Details.Modal.Header_2:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.Primary
@@ -467,7 +490,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Details.Modal.Title_2:
-                      Control: Label
+                      Control: Label@2.5.1
                       Properties:
                         Color: =Colors.White
                         FontWeight: =FontWeight.Bold
@@ -477,7 +500,7 @@ Screens:
                         Width: =Parent.Width * 0.8
                         X: =Parent.Width * 0.04
                   - Details.Modal.Close.Button_2:
-                      Control: Classic/Button
+                      Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =Colors.White
                         Color: =Colors.White
@@ -491,7 +514,7 @@ Screens:
                         X: =Parent.Width * 0.9
                         Y: =Parent.Height * 0.2
             - Details.Modal.Content_1:
-                Control: GroupContainer
+                Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -500,7 +523,7 @@ Screens:
                   Y: =Parent.Height * 0.1
                 Children:
                   - Request.Info.Section_1:
-                      Control: GroupContainer
+                      Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
                         BorderColor: =Colors.BorderLight
@@ -512,7 +535,7 @@ Screens:
                         Y: =Parent.Height * 0.02
                       Children:
                         - Info.Section.Title_1:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Bold
@@ -523,7 +546,7 @@ Screens:
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.05
                         - Request.Code.Detail_1:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -534,7 +557,7 @@ Screens:
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.3
                         - Employee.Name.Detail_1:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -544,7 +567,7 @@ Screens:
                               X: =Parent.Width * 0.26
                               Y: =Parent.Height * 0.3
                         - Card.Type.Detail_2:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -554,7 +577,7 @@ Screens:
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.3
                         - Priority.Detail_2:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -564,7 +587,7 @@ Screens:
                               X: =Parent.Width * 0.73
                               Y: =Parent.Height * 0.3
                         - Request.Date.Detail_2:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -574,7 +597,7 @@ Screens:
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.6
                         - Department.Detail_2:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -584,7 +607,7 @@ Screens:
                               X: =Parent.Width * 0.26
                               Y: =Parent.Height * 0.6
                         - Current.Status.Detail_1:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
@@ -594,7 +617,7 @@ Screens:
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.6
                   - Approval.Timeline.Section_1:
-                      Control: GroupContainer
+                      Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
                         Fill: =Colors.BackgroundLight
@@ -604,7 +627,7 @@ Screens:
                         Y: =Parent.Height * 0.29
                       Children:
                         - Timeline.Section.Title_1:
-                            Control: Label
+                            Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Bold
@@ -615,7 +638,7 @@ Screens:
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.02
                         - Approval.Steps.Gallery_1:
-                            Control: Gallery
+                            Control: Gallery@2.15.0
                             Variant: Vertical
                             Properties:
                               Height: =Parent.Height * 0.86
@@ -627,7 +650,7 @@ Screens:
                               Y: =Parent.Height * 0.12
                             Children:
                               - Step.Container_1:
-                                  Control: Rectangle
+                                  Control: Rectangle@2.3.0
                                   Properties:
                                     BorderColor: =Colors.BorderLight
                                     BorderThickness: =1
@@ -635,7 +658,7 @@ Screens:
                                     Height: =Parent.TemplateHeight
                                     Width: =Parent.Width
                               - Step.Number.Circle_1:
-                                  Control: GroupContainer
+                                  Control: GroupContainer@1.3.0
                                   Variant: ManualLayout
                                   Properties:
                                     Fill: |
@@ -651,7 +674,7 @@ Screens:
                                     Y: =Parent.Height * 0.2
                                   Children:
                                     - Step.Number.Text_1:
-                                        Control: Label
+                                        Control: Label@2.5.1
                                         Properties:
                                           Align: =Align.Center
                                           Color: =Colors.White
@@ -661,7 +684,7 @@ Screens:
                                           Text: =Text(ThisItem.Step)
                                           Width: =Parent.Width
                               - Step.Role.Label_1:
-                                  Control: Label
+                                  Control: Label@2.5.1
                                   Properties:
                                     Color: =Colors.TextPrimary
                                     FontWeight: =FontWeight.Bold
@@ -672,7 +695,7 @@ Screens:
                                     X: =Parent.Width * 0.12
                                     Y: =Parent.Height * 0.1
                               - Step.Approver.Name_1:
-                                  Control: Label
+                                  Control: Label@2.5.1
                                   Properties:
                                     Color: =If(IsBlank(ThisItem.ApproverName), Colors.TextMuted, Colors.TextPrimary)
                                     Height: =Parent.Height * 0.3
@@ -682,7 +705,7 @@ Screens:
                                     X: =Parent.Width * 0.32
                                     Y: =Parent.Height * 0.1
                               - Step.Approval.Date_1:
-                                  Control: Label
+                                  Control: Label@2.5.1
                                   Properties:
                                     Color: =If(IsBlank(ThisItem.ApprovalDate), Colors.TextMuted, Colors.TextPrimary)
                                     Height: =Parent.Height * 0.3
@@ -692,7 +715,7 @@ Screens:
                                     X: =Parent.Width * 0.52
                                     Y: =Parent.Height * 0.1
                               - Step.Status.Badge_1:
-                                  Control: GroupContainer
+                                  Control: GroupContainer@1.3.0
                                   Variant: ManualLayout
                                   Properties:
                                     Fill: |
@@ -708,7 +731,7 @@ Screens:
                                     Y: =Parent.Height * 0.05
                                   Children:
                                     - Step.Status.Text_1:
-                                        Control: Label
+                                        Control: Label@2.5.1
                                         Properties:
                                           Align: =Align.Center
                                           Color: |
@@ -730,7 +753,7 @@ Screens:
                                             )
                                           Width: =Parent.Width
                               - Step.Comments.Label_1:
-                                  Control: Label
+                                  Control: Label@2.5.1
                                   Properties:
                                     Color: =Colors.TextPrimary
                                     FontWeight: =FontWeight.Semibold
@@ -741,7 +764,7 @@ Screens:
                                     X: =Parent.Width * 0.12
                                     Y: =Parent.Height * 0.45
                               - Step.Comments.Text_1:
-                                  Control: Label
+                                  Control: Label@2.5.1
                                   Properties:
                                     Color: =If(IsBlank(ThisItem.Comments), Colors.TextMuted, Colors.TextPrimary)
                                     Height: =Parent.Height * 0.3
