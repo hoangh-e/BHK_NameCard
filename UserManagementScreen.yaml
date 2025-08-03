@@ -1350,8 +1350,10 @@ Screens:
                         Height: =Parent.Height * 0.6
                         OnSelect: |
                           =If(varDetailFormMode = "View",
-                            Set(varDetailFormMode, "Edit"),
-                            Set(varDetailFormMode, "View")
+                            Set(varDetailFormMode, "Edit");
+                            Set(varErrorMessage, ""),
+                            Set(varDetailFormMode, "View");
+                            Set(varErrorMessage, "")
                           )
                         Size: =FontSizes.Medium
                         Text: =If(varDetailFormMode = "View", "Chỉnh sửa ✎", "Huỷ chỉnh sửa ✕")
@@ -1493,7 +1495,7 @@ Screens:
                               BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
                               Default: =varSelectedUser.Department
                               Height: =Styles.Input.Height
-                              Items: =["Phòng Công nghệ thông tin", "Phòng Kế toán", "Phòng Nhân sự", "Phòng Marketing", "Ban Giám đốc"]
+                              Items: =Department_1.name
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1602,12 +1604,25 @@ Screens:
                               BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
                               Default: =varSelectedUser.Role
                               Height: =Styles.Input.Height
-                              Items: =["Employee", "Manager", "HR", "Admin"]
+                              Items: =Role_1.name
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.55
                               Y: =195
+                        - Detail.Error.Message:
+                            Control: Label
+                            Properties:
+                              AutoHeight: =true
+                              Color: =Colors.Error
+                              FontWeight: =FontWeight.Semibold
+                              Height: =30
+                              Size: =FontSizes.Base
+                              Text: =varErrorMessage
+                              Visible: =Not(IsBlank(varErrorMessage)) && varDetailFormMode = "Edit"
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =240
             - Detail.Form.Footer:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -1629,7 +1644,8 @@ Screens:
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Secondary.HoverFill
                         OnSelect: |
-                          =Set(varDetailFormMode, "View")
+                          =Set(varDetailFormMode, "View");
+                          Set(varErrorMessage, "")
                         Size: =FontSizes.Medium
                         Text: ="Huỷ"
                         Width: =Parent.Width * 0.15
@@ -1644,17 +1660,40 @@ Screens:
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
                         OnSelect: |
-                          =UpdateIf(colUsers, Id = varSelectedUser.Id, {
-                            FullName: 'Detail.FullName.Input'.Text,
-                            Email: 'Detail.Email.Input'.Text,
-                            Department: 'Detail.Department.Dropdown'.Selected.Value,
-                            JobTitle: 'Detail.JobTitle.Input'.Text,
-                            Phone: 'Detail.Phone.Input'.Text,
-                            Role: 'Detail.Role.Dropdown'.Selected.Value
-                          });
-                          Set(varSelectedUser, LookUp(colUsers, Id = varSelectedUser.Id));
-                          Set(varDetailFormMode, "View");
-                          Notify("Đã cập nhật thông tin người dùng thành công!", NotificationType.Success)
+                          =// Clear previous errors
+                          Set(varErrorMessage, "");
+                          // Update SharePoint data with error handling
+                          IfError(
+                            // Update user information
+                            Patch(User_1, LookUp(User_1, userID = varSelectedUser.userID), {
+                              fullname: 'Detail.FullName.Input'.Text,
+                              email: 'Detail.Email.Input'.Text,
+                              departmentID: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.Value).departmentID,
+                              jobTitle: 'Detail.JobTitle.Input'.Text,
+                              phone: 'Detail.Phone.Input'.Text
+                            });
+                            // Update user role mapping
+                            Patch(User_Role, LookUp(User_Role, userID = varSelectedUser.userID), {
+                              roleID: LookUp(Role_1, name = 'Detail.Role.Dropdown'.Selected.Value).roleID
+                            });
+                            // Refresh collections to reflect changes
+                            ClearCollect(colUsers, 
+                              AddColumns(
+                                AddColumns(User_1, 
+                                  "Department", LookUp(Department_1, departmentID = ThisRecord.departmentID).name
+                                ),
+                                "Role", LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
+                              )
+                            );
+                            // Update selected user with new data
+                            Set(varSelectedUser, LookUp(colUsers, userID = varSelectedUser.userID));
+                            // Switch back to view mode
+                            Set(varDetailFormMode, "View");
+                            // Show success notification
+                            Notify("Đã cập nhật thông tin người dùng thành công!", NotificationType.Success),
+                            // Error handling
+                            Set(varErrorMessage, "Có lỗi khi cập nhật thông tin: " & FirstError.Message)
+                          )
                         Size: =FontSizes.Medium
                         Text: ="Lưu"
                         Width: =Parent.Width * 0.2
