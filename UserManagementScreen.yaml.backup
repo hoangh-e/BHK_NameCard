@@ -376,10 +376,10 @@ Screens:
                         Height: =Parent.Height
                         Item: =If(varFormMode = "Edit", varEditingUser, Defaults(User_1))
                         OnFailure: |
-                          =Notify("Có lỗi khi lưu dữ liệu: " & FirstError.Message, NotificationType.Error)
+                          =Notify("Có lỗi khi lưu dữ liệu", NotificationType.Error)
                         OnReset: |
                           =Set(varFormMode, "Add"); Set(varEditingUser, Blank())
-                        OnSuccess: "=If(varFormMode = \"Add\",\n  // NEW USER CREATION - Simplified  \n  With({\n    newUserID: Concatenate(\"USER_\", Text(Rand() * 1000000, \"000000\"))\n  },\n    // Create new user record\n    Patch(User_1, Defaults(User_1), {\n      userID: newUserID,\n      fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,\n      email: 'User.Add.Edit.Form'.email_DataCard.Update,\n      departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update,\n      jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,\n      phone: 'User.Add.Edit.Form'.phone_DataCard.Update\n    });\n    \n    // Create user role mapping if role selected\n    If(\n      Not(IsBlank('User.Add.Edit.Form'.roleID_DataCard.Update)),\n      Patch(UserRole, Defaults(UserRole), {\n        userID: newUserID,\n        roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update\n      })\n    )\n  ),\n  \n  // EDIT USER - Simplified\n  Patch(User_1, LookUp(User_1, userID = varEditingUser.userID), {\n    fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,\n    email: 'User.Add.Edit.Form'.email_DataCard.Update, \n    departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update,\n    jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,\n    phone: 'User.Add.Edit.Form'.phone_DataCard.Update\n  });\n  \n  // Update user role mapping if changed\n  If(\n    Not(IsBlank('User.Add.Edit.Form'.roleID_DataCard.Update)),\n    Patch(UserRole, LookUp(UserRole, userID = varEditingUser.userID), {\n      roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update\n    })\n  )\n);\n\n// Refresh collections - Error Safe\nIfError(\n  // Reload users with department and role info\n  ClearCollect(colUsersRaw, User_1);\n  ClearCollect(\n    colUsersWithDept,\n    AddColumns(\n      colUsersRaw,\n      Department,\n      LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n    )\n  );\n  ClearCollect(\n    colUsers,\n    AddColumns(\n      colUsersWithDept,\n      Role,\n      LookUp(\n        colRoles,\n        roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID\n      ).name\n    )\n  ),\n  \n  // Fallback - Just reload basic user data\n  ClearCollect(colUsers, User_1);\n  Notify(\"Data refreshed with basic info only\", NotificationType.Warning)\n);\n\n// Close modal and show success message\nSet(varShowUserForm, false);\nNotify(If(varFormMode = \"Add\", \"Đã thêm người dùng thành công!\", \"Đã cập nhật thông tin người dùng!\"), NotificationType.Success)\n"
+                        OnSuccess: =Notify("Thành công")
                         Width: =Parent.Width
                       Children:
                         - fullname_DataCard:
@@ -1086,7 +1086,7 @@ Screens:
                         Fill: =Styles.Button.Secondary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Secondary.HoverFill
-                        OnSelect: |
+                        OnSelect: |-
                           =ResetForm('User.Add.Edit.Form');
                           Set(varShowUserForm, false)
                         Size: =FontSizes.Medium
@@ -1103,11 +1103,10 @@ Screens:
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
-                        OnSelect: |
-                          =SubmitForm('User.Add.Edit.Form')
+                        OnSelect: =SubmitForm('User.Add.Edit.Form')
                         Size: =FontSizes.Medium
                         Text: =If(varFormMode = "Add", "Thêm người dùng", "Cập nhật")
-                        Width: =Parent.Width * 0.2
+                        Width: =150
                         X: =Parent.Width * 0.75
                         Y: =Parent.Height * 0.2
       - Delete.Modal.Overlay:
@@ -1201,10 +1200,10 @@ Screens:
                         HoverFill: =Styles.Button.Danger.HoverFill
                         OnSelect: |
                           =// Delete from SharePoint
-                          Remove(User_1, LookUp(User_1, userID = varSelectedUser.userID));
+                          Remove(User_1, LookUp(User_1, userID.Value = varSelectedUser.userID));
 
                           // Remove from UserRole table
-                          RemoveIf(UserRole, userID = varSelectedUser.userID);
+                          RemoveIf(UserRole, userID.Value = varSelectedUser.userID);
 
                           // Update collection
                           RemoveIf(colUsers, userID = varSelectedUser.userID);
@@ -1416,7 +1415,7 @@ Screens:
                               FocusedBorderThickness: =2
                               Height: =Styles.Input.Height
                               Items: =Department_1
-                              Items.Value: =ComplianceAssetId
+                              Items.Value: =name
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1530,7 +1529,7 @@ Screens:
                               FocusedBorderThickness: =2
                               Height: =Styles.Input.Height
                               Items: =Role_1
-                              Items.Value: =ComplianceAssetId
+                              Items.Value: =name
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1585,7 +1584,7 @@ Screens:
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
-                        OnSelect: "=// Clear previous errors\nSet(varErrorMessage, \"\");\n\n// Create lookup objects for SharePoint\nSet(\n  varDepartmentLookup,\n  {\n    Id: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.name).departmentID,\n    Value: 'Detail.Department.Dropdown'.Selected.name\n  }\n);\nSet(\n  varRoleLookup,\n  {\n    Id: LookUp(Role_1, name = 'Detail.Role.Dropdown'.Selected.name).roleID,\n    Value: 'Detail.Role.Dropdown'.Selected.name\n  }\n);\n\n// Update SharePoint data with error handling\nIfError(\n  // Update user information\n  Patch(\n    User_1,\n    LookUp(User_1, userID = varSelectedUser.userID),\n    {\n      fullname: 'Detail.FullName.Input'.Text,\n      email: 'Detail.Email.Input'.Text,\n      departmentID: varDepartmentLookup,\n      jobTitle: 'Detail.JobTitle.Input'.Text,\n      phone: 'Detail.Phone.Input'.Text\n    }\n  );\n  \n  // Update user role mapping if role changed\n  If(\n    Not(IsBlank(varRoleLookup)),\n    Patch(UserRole, LookUp(UserRole, userID = varSelectedUser.userID), {\n      roleID: varRoleLookup.Id\n    })\n  );\n  \n  // Refresh collections - Error Safe\n  IfError(\n    ClearCollect(colUsersRaw, User_1);\n    ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n        colUsersRaw,\n        Department,\n        LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n    );\n    ClearCollect(\n      colUsers,\n      AddColumns(\n        colUsersWithDept,\n        Role,\n        LookUp(\n          colRoles,\n          roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID\n        ).name\n      )\n    ),\n    \n    // Fallback\n    ClearCollect(colUsers, User_1)\n  );\n  \n  // Update selected user with new data\n  Set(varSelectedUser, LookUp(colUsers, userID = varSelectedUser.userID));\n  Set(varDetailFormMode, \"View\");\n  Notify(\"Đã cập nhật thông tin người dùng thành công!\", NotificationType.Success),\n  \n  // Error handling\n  Set(varErrorMessage, \"Có lỗi khi cập nhật thông tin: \" & FirstError.Message)\n)\n"
+                        OnSelect: "=// Clear previous errors\nSet(varErrorMessage, \"\");\n\n// Create lookup objects for SharePoint\nSet(\n  varDepartmentLookup,\n  {\n    Id: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.name).ID,\n    Value: 'Detail.Department.Dropdown'.Selected.name\n  }\n);\nSet(\n  varRoleLookup,\n  {\n    Id: LookUp(Role_1, name = 'Detail.Role.Dropdown'.Selected.name).ID,\n    Value: 'Detail.Role.Dropdown'.Selected.name\n  }\n);\n\n// Update SharePoint data with error handling\nIfError(\n  // Update user information\n  Patch(\n    User_1,\n    LookUp(User_1, userID = varSelectedUser.userID),\n    {\n      fullname: 'Detail.FullName.Input'.Text,\n      email: 'Detail.Email.Input'.Text,\n      departmentID: varDepartmentLookup,\n      jobTitle: 'Detail.JobTitle.Input'.Text,\n      phone: 'Detail.Phone.Input'.Text\n    }\n  );\n  \n  // Update user role mapping if role changed\n  If(\n    Not(IsBlank(varRoleLookup)),\n    Patch(UserRole, LookUp(UserRole, userID.Value = varSelectedUser.userID), {\n      roleID: varRoleLookup\n    })\n  );\n  \n  // Refresh collections - Error Safe\n  IfError(\n    ClearCollect(colUsersRaw, User_1);\n    ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n        colUsersRaw,\n        Department,\n        LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n    );\n    ClearCollect(\n      colUsers,\n      AddColumns(\n        colUsersWithDept,\n        Role,\n        LookUp(\n          colRoles,\n          roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n        ).name\n      )\n    ),\n    \n    // Fallback\n    ClearCollect(colUsers, User_1)\n  );\n  \n  // Update selected user with new data\n  Set(varSelectedUser, LookUp(colUsers, userID = varSelectedUser.userID));\n  Set(varDetailFormMode, \"View\");\n  Notify(\"Đã cập nhật thông tin người dùng thành công!\", NotificationType.Success),\n  \n  // Error handling\n  Set(varErrorMessage, \"Có lỗi khi cập nhật thông tin\")\n)\n"
                         Size: =FontSizes.Medium
                         Text: ="Lưu"
                         Width: =Parent.Width * 0.2
