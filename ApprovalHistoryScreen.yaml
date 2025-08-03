@@ -1,40 +1,8 @@
 Screens:
-  ApprovalHistoryScreen_1:
+  ApprovalHistoryScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: |
-        =// Sử dụng SharePoint data
-        IfError(
-          // Load SharePoint data
-          ClearCollect(colApprovalHistoryRaw, NamecardRequest);
-          ClearCollect(colApprovalHistory,
-            AddColumns(
-              AddColumns(
-                colApprovalHistoryRaw,
-                EmployeeName, LookUp(User_1, userID = ThisRecord.userID).fullname
-              ),
-              Department, LookUp(Department_1, departmentID = LookUp(User_1, userID = ThisRecord.userID).departmentID.Value).name
-            )
-          ),
-          // Fallback to empty data if SharePoint fails
-          ClearCollect(colApprovalHistory, Table())
-        );
-        Set(varCurrentUser, {FullName: "Trần Thị Bình", Role: "Manager", Department: "Phòng Công nghệ thông tin"});
-        Set(varSelectedApproval, Blank());
-        Set(varShowApprovalDetails, false);
-        Set(varFilterStatus, "All");
-        Set(varFilterPriority, "All");
-        Set(varDateFrom, Blank());
-        Set(varDateTo, Blank());
-        Set(varSearchEmployee, "");
-        UpdateContext({
-          summaryStats: {
-            TotalRequests: CountRows(colApprovalHistory),
-            PendingApprovals: CountRows(Filter(colApprovalHistory, Status in ["PendingManagerApproval", "PendingHRApproval"])),
-            ApprovedRequests: CountRows(Filter(colApprovalHistory, Status = "Approved")),
-            RejectedRequests: CountRows(Filter(colApprovalHistory, Status = "Rejected"))
-          }
-        })
+      OnVisible: "=// Load SharePoint data với mapping chính xác\nIfError(\n  // Load main NamecardRequest data\n  ClearCollect(colApprovalHistoryRaw, NamecardRequest_1);\n  \n  // Tạo collection với mapping đúng fields SharePoint\n  ClearCollect(colApprovalHistory,\n    AddColumns(\n      AddColumns(\n        AddColumns(\n          AddColumns(\n            colApprovalHistoryRaw,\n            \"EmployeeName\", \n            With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n              If(IsBlank(lookupUser), \"[Không tìm thấy]\", lookupUser.fullname)\n            )\n          ),\n          \"Department\", \n          With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n            If(\n              IsBlank(lookupUser), \n              \"[Không tìm thấy]\",\n              With({lookupDept: LookUp(Department_1, departmentID = lookupUser.departmentID.Id)},\n                If(IsBlank(lookupDept), \"[Không có phòng ban]\", lookupDept.name)\n              )\n            )\n          )\n        ),\n        \"RequestCode\", \"REQ-\" & Text(ThisRecord.requestID, \"000000\")\n      ),\n      \"StatusText\",\n      With({statusLookup: LookUp(gblColStatusList, StatusText = ThisRecord.status.Value)},\n        If(IsBlank(statusLookup), ThisRecord.status.Value, statusLookup.StatusText)\n      )\n    )\n  ),\n  // Fallback nếu SharePoint fails\n  ClearCollect(colApprovalHistory, Table())\n);\n\n// Set current user\nSet(varCurrentUser, {FullName: \"Trần Thị Bình\", Role: \"Manager\", Department: \"Phòng Công nghệ thông tin\"});\nSet(varSelectedApproval, Blank());\nSet(varShowApprovalDetails, false);\nSet(varFilterStatus, \"All\");\nSet(varFilterPriority, \"All\");\nSet(varDateFrom, Blank());\nSet(varDateTo, Blank());\nSet(varSearchEmployee, \"\");\n\n// Update summary stats với correct status mapping\nUpdateContext({\n  summaryStats: {\n    TotalRequests: CountRows(colApprovalHistory),\n    PendingApprovals: CountRows(Filter(colApprovalHistory, \n      status.Value in [\"Chờ quản lý duyệt\", \"Chờ HR duyệt\"]\n    )),\n    ApprovedRequests: CountRows(Filter(colApprovalHistory, status.Value = \"Đã duyệt\")),\n    RejectedRequests: CountRows(Filter(colApprovalHistory, status.Value = \"Từ chối\"))\n  }\n})\n"
     Children:
       - Main.Content.Container_4:
           Control: GroupContainer
@@ -175,9 +143,12 @@ Screens:
                         Items: |
                           =Table(
                           {Name: "Tất cả", Value: "All"},
-                          {Name: "Chờ phê duyệt", Value: "Pending"},
-                          {Name: "Đã phê duyệt", Value: "Approved"},
-                          {Name: "Bị từ chối", Value: "Rejected"}
+                          {Name: "Chờ quản lý duyệt", Value: "Chờ quản lý duyệt"},
+                          {Name: "Chờ HR duyệt", Value: "Chờ HR duyệt"},
+                          {Name: "Đã duyệt", Value: "Đã duyệt"},
+                          {Name: "Đã in", Value: "Đã in"},
+                          {Name: "Đã phát", Value: "Đã phát"},
+                          {Name: "Từ chối", Value: "Từ chối"}
                           )
                         OnChange: |
                           =Set(varFilterStatus, Self.Selected.Value)
@@ -195,9 +166,9 @@ Screens:
                         Items: |
                           =Table(
                           {Name: "Tất cả", Value: "All"},
-                          {Name: "Cao", Value: "High"},
-                          {Name: "Thường", Value: "Normal"},
-                          {Name: "Thấp", Value: "Low"}
+                          {Name: "Nhân viên mới", Value: "High"},
+                          {Name: "Thay thế/Cập nhật", Value: "Normal"},
+                          {Name: "Tạm thời", Value: "Low"}
                           )
                         OnChange: |
                           =Set(varFilterPriority, Self.Selected.Value)
@@ -331,31 +302,34 @@ Screens:
             HeadingColor: =Colors.White
             HeadingFill: =Colors.Primary
             HeadingFont: =Font.'Segoe UI'
-            Height: =368
+            Height: =352
             Items: |
               =Filter(colApprovalHistory,
-                // Filter by status
-                If(varFilterStatus = "All", true, 
-                  If(varFilterStatus = "Pending", Status in ["PendingManagerApproval", "PendingHRApproval"],
-                    If(varFilterStatus = "Approved", Status = "Approved",
-                      If(varFilterStatus = "Rejected", Status = "Rejected", true)
+                // Filter by status - sử dụng đúng SharePoint status values
+                If(varFilterStatus = "All", true, status.Value = varFilterStatus) &&
+                
+                // Filter by suggestedReason (priority mapping)
+                If(varFilterPriority = "All", true, 
+                  If(varFilterPriority = "High", suggestedReason = "New Employee",
+                    If(varFilterPriority = "Normal", suggestedReason in ["Replacement", "Update Info"],
+                      If(varFilterPriority = "Low", suggestedReason = "Temporary", true)
                     )
                   )
                 ) &&
-                // Filter by priority  
-                If(varFilterPriority = "All", true, Priority = varFilterPriority) &&
+                
                 // Filter by employee name
                 If(IsBlank(varSearchEmployee), true, 
                   EmployeeName in varSearchEmployee || 
                   StartsWith(Lower(EmployeeName), Lower(varSearchEmployee))
                 ) &&
-                // Filter by date range
-                If(IsBlank(varDateFrom), true, RequestDate >= varDateFrom) &&
-                If(IsBlank(varDateTo), true, RequestDate <= varDateTo)
+                
+                // Filter by date range - sử dụng Created field
+                If(IsBlank(varDateFrom), true, DateValue(Created) >= varDateFrom) &&
+                If(IsBlank(varDateTo), true, DateValue(Created) <= varDateTo)
               )
             Width: =1166
             X: =200
-            Y: =400
+            Y: =415
           Children:
             - RequestCode.Column:
                 Control: DataTableColumn
@@ -379,64 +353,37 @@ Screens:
                 Control: DataTableColumn
                 Variant: Textual
                 Properties:
-                  FieldDisplayName: ="Loại thẻ"
-                  FieldName: ="CardType"
+                  FieldDisplayName: ="Lý do yêu cầu"
+                  FieldName: ="suggestedReason"
                   Order: =3
-                  Text: |
-                    =Switch(ThisItem.CardType,
-                      "Standard", "Tiêu chuẩn",
-                      "Executive", "Điều hành", 
-                      "Temporary", "Tạm thời",
-                      ThisItem.CardType
-                    )
-                  Width: =120
+                  Text: =ThisItem.suggestedReason
+                  Width: =150
             - RequestDate.Column:
                 Control: DataTableColumn
                 Variant: DateTime
                 Properties:
                   FieldDisplayName: ="Ngày tạo"
-                  FieldName: ="RequestDate"
+                  FieldName: ="Created"
                   Order: =4
-                  Text: =Text(ThisItem.RequestDate, "dd/mm/yyyy")
+                  Text: =Text(DateValue(ThisItem.Created), "dd/mm/yyyy")
+                  Width: =120
             - Priority.Column:
                 Control: DataTableColumn
                 Variant: Textual
                 Properties:
-                  FieldDisplayName: ="Ưu tiên"
-                  FieldName: ="Priority"
+                  FieldDisplayName: ="Số lượng"
+                  FieldName: ="quantity"
                   Order: =5
-                  Text: |
-                    =Switch(ThisItem.Priority,
-                      "High", "Cao",
-                      "Normal", "Thường", 
-                      "Low", "Thấp",
-                      ThisItem.Priority
-                    )
+                  Text: =Text(ThisItem.quantity)
                   Width: =80
             - Status.Column_1:
                 Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Trạng thái"
-                  FieldName: ="Status"
+                  FieldName: ="status"
                   Order: =6
-                  Text: |
-                    =Switch(ThisItem.Status,
-                      "PendingManagerApproval", "Chờ Manager phê duyệt",
-                      "PendingHRApproval", "Chờ HR phê duyệt",
-                      "Approved", "Đã phê duyệt",
-                      "Rejected", "Bị từ chối",
-                      "Không xác định"
-                    )
-                  Width: =150
-            - Actions.Column:
-                Control: DataTableColumn
-                Variant: Textual
-                Properties:
-                  FieldDisplayName: ="Thao tác"
-                  FieldName: ="Actions"
-                  Order: =7
-                  Text: "=\"\U0001F441 Xem chi tiết\""
+                  Text: =ThisItem.status.Value
                   Width: =120
       - Approval.Details.Modal.Overlay_1:
           Control: Rectangle
@@ -529,7 +476,7 @@ Screens:
                               Height: =Parent.Height * 0.25
                               Size: =FontSizes.Small
                               Text: |
-                                =Concatenate("Mã yêu cầu:", varSelectedApproval.RequestCode)
+                                =Concatenate("Mã yêu cầu: ", varSelectedApproval.RequestCode)
                               Width: =Parent.Width * 0.23
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.3
@@ -549,7 +496,7 @@ Screens:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
                               Size: =FontSizes.Small
-                              Text: =Concatenate("Loại thẻ:", varSelectedApproval.CardType)
+                              Text: =Concatenate("Lý do:", varSelectedApproval.suggestedReason)
                               Width: =Parent.Width * 0.23
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.3
@@ -559,7 +506,7 @@ Screens:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
                               Size: =FontSizes.Small
-                              Text: =Concatenate("Ưu tiên:", Switch(varSelectedApproval.Priority, "High", "Cao", "Normal", "Thường", "Low", "Thấp", "Thường"))
+                              Text: =Concatenate("Số lượng:", Text(varSelectedApproval.quantity))
                               Width: =Parent.Width * 0.24
                               X: =Parent.Width * 0.73
                               Y: =Parent.Height * 0.3
@@ -569,7 +516,7 @@ Screens:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
                               Size: =FontSizes.Small
-                              Text: =Concatenate("Ngày tạo:", Text(varSelectedApproval.RequestDate, "dd/mm/yyyy"))
+                              Text: =Concatenate("Ngày tạo:", Text(DateValue(varSelectedApproval.Created), "dd/mm/yyyy"))
                               Width: =Parent.Width * 0.23
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.6
@@ -589,10 +536,20 @@ Screens:
                               Color: =Colors.TextPrimary
                               Height: =Parent.Height * 0.25
                               Size: =FontSizes.Small
-                              Text: =Concatenate("Trạng thái hiện tại:", Switch(varSelectedApproval.Status, "PendingManagerApproval", "Chờ Manager phê duyệt", "PendingHRApproval", "Chờ HR phê duyệt", "Approved", "Đã phê duyệt", "Rejected", "Bị từ chối", "Không xác định"))
+                              Text: =Concatenate("Trạng thái:", varSelectedApproval.status)
                               Width: =Parent.Width * 0.47
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.6
+                        - Note.Detail_1:
+                            Control: Label
+                            Properties:
+                              Color: =Colors.TextPrimary
+                              Height: =Parent.Height * 0.25
+                              Size: =FontSizes.Small
+                              Text: =If(IsBlank(varSelectedApproval.note), "Ghi chú:Không có", Concatenate("Ghi chú:", varSelectedApproval.note))
+                              Width: =Parent.Width * 0.94
+                              X: =Parent.Width * 0.03
+                              Y: =Parent.Height * 0.85
                   - Approval.Timeline.Section_1:
                       Control: GroupContainer
                       Variant: ManualLayout

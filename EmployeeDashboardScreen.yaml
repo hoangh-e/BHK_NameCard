@@ -6,35 +6,26 @@ Screens:
         =// Load SharePoint data first - prioritize over demo data
         Set(varLoadingRequests, true);
         
-        // Try to load from SharePoint NameCardRequest table
+        // Try to load from SharePoint NamecardRequest_1 table
         IfError(
           ClearCollect(colNameCardRequests, 
-            Filter(NameCardRequest, 
-              EmployeeId = varCurrentEmployee.Id
+            Filter(NamecardRequest_1, 
+              userID = varCurrentEmployee.userID
             )
           ),
           // Fallback to demo data if SharePoint unavailable
           ClearCollect(colNameCardRequests,
-            {Id: 1, EmployeeId: 1, EmployeeName: "Nguyễn Văn An", RequestDate: Date(2024, 1, 15), 
-             CardType: "Standard", Department: "Phòng Công nghệ thông tin", JobTitle: "Trưởng phòng", 
-             Status: "Approved", ApprovalDate: Date(2024, 1, 18), 
-             RequestedBy: "Nguyễn Văn An", PrintStatus: "Printed", DistributionDate: Date(2024, 1, 20),
-             Notes: "Thẻ tên cho trưởng phòng mới", Priority: "Normal"},
-            {Id: 2, EmployeeId: 1, EmployeeName: "Nguyễn Văn An", RequestDate: Date(2024, 1, 10), 
-             CardType: "Executive", Department: "Phòng Công nghệ thông tin", JobTitle: "Trưởng phòng", 
-             Status: "PendingManagerApproval", ApprovalDate: Blank(), 
-             RequestedBy: "Nguyễn Văn An", PrintStatus: "NotPrinted", DistributionDate: Blank(),
-             Notes: "Thẻ tên executive cho sự kiện quan trọng", Priority: "High"},
-            {Id: 3, EmployeeId: 1, EmployeeName: "Nguyễn Văn An", RequestDate: Date(2024, 1, 5), 
-             CardType: "Temporary", Department: "Phòng Công nghệ thông tin", JobTitle: "Chuyên viên", 
-             Status: "Rejected", ApprovalDate: Date(2024, 1, 8), 
-             RequestedBy: "Nguyễn Văn An", PrintStatus: "NotPrinted", DistributionDate: Blank(),
-             Notes: "Thẻ tạm thời cho dự án", Priority: "Low"}
+            {requestID: 1, userID: "U001", quantity: 1, suggestedReason: "Thẻ tên cho trưởng phòng mới", 
+             note: "Thẻ tên executive cho sự kiện quan trọng", status: "Đã duyệt", printNote: "Đã in"},
+            {requestID: 2, userID: "U001", quantity: 1, suggestedReason: "Thẻ tên executive cho sự kiện quan trọng", 
+             note: "Cần in gấp", status: "Chờ duyệt", printNote: ""},
+            {requestID: 3, userID: "U001", quantity: 2, suggestedReason: "Thẻ tạm thời cho dự án", 
+             note: "Dự án kéo dài 3 tháng", status: "Từ chối", printNote: ""}
           );
           Notify("Đang sử dụng dữ liệu demo - không thể kết nối SharePoint", NotificationType.Warning)
         );
         
-        Set(varCurrentEmployee, {Id: 1, FullName: "Nguyễn Văn An", Department: "Phòng Công nghệ thông tin", Role: "Employee"});
+        Set(varCurrentEmployee, {userID: "U001", fullname: "Nguyễn Văn An", departmentID: 1});
         Set(varShowRequestForm, false);
         Set(varFormMode, "Create");
         Set(varEditingRequest, Blank());
@@ -49,10 +40,10 @@ Screens:
         
         UpdateContext({
           statsData: {
-            TotalRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id)),
-            PendingRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "PendingManagerApproval")),
-            ApprovedRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "Approved")),
-            RejectedRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "Rejected"))
+            TotalRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID)),
+            PendingRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Chờ duyệt")),
+            ApprovedRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Đã duyệt")),
+            RejectedRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Từ chối"))
           }
         })
     Children:
@@ -91,7 +82,7 @@ Screens:
                         Color: =Colors.TextMuted
                         Height: =Parent.Height * 0.35
                         Size: =FontSizes.Base
-                        Text: =Concatenate("Xin chào, ", varCurrentEmployee.FullName)
+                        Text: =Concatenate("Xin chào, ", varCurrentEmployee.fullname)
                         Width: =Parent.Width * 0.5
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.5
@@ -226,11 +217,12 @@ Screens:
                               Items: |
                                 =Table(
                                 {Value: "All", Text: "Tất cả"},
-                                {Value: "PendingManagerApproval", Text: "Chờ duyệt"},
-                                {Value: "Approved", Text: "Đã duyệt"},
-                                {Value: "Rejected", Text: "Bị từ chối"}
+                                {Value: "Chờ duyệt", Text: "Chờ duyệt"},
+                                {Value: "Đã duyệt", Text: "Đã duyệt"},
+                                {Value: "Từ chối", Text: "Từ chối"},
+                                {Value: "Đã in", Text: "Đã in"},
+                                {Value: "Đã phát", Text: "Đã phát"}
                                 )
-                              DisplayFields: =["Text"]
                               OnChange: |
                                 =Set(varFilterStatus, Self.Selected.Result.Value)
                               Width: =Parent.Width * 0.2
@@ -276,9 +268,9 @@ Screens:
                               Items: |
                                 =Filter(colNameCardRequests, 
                                   And(
-                                    EmployeeId = varCurrentEmployee.Id,
-                                    Or(varFilterStatus = "All", Status = varFilterStatus),
-                                    Or(IsBlank(varSearchText), varSearchText = "", Notes Like "*" & varSearchText & "*")
+                                    userID = varCurrentEmployee.userID,
+                                    Or(varFilterStatus = "All", status = varFilterStatus),
+                                    Or(IsBlank(varSearchText), varSearchText = "", note Like "*" & varSearchText & "*")
                                   )
                                 )
                               Size: =13
@@ -289,89 +281,55 @@ Screens:
                                   Variant: Textual
                                   Properties:
                                     FieldDisplayName: ="Mã YC"
-                                    FieldName: ="RequestID"
+                                    FieldName: ="requestID"
                                     Order: =1
-                                    Text: =Concatenate("YC-", Text(ThisItem.Id, "000"))
+                                    Text: =Concatenate("YC-", Text(ThisItem.requestID, "000"))
                                     Width: =90
-                              - RequestDate.Column:
+                              - Quantity.Column:
                                   Control: DataTableColumn
-                                  Variant: DateTime
+                                  Variant: Textual
                                   Properties:
-                                    FieldDisplayName: ="Ngày tạo"
-                                    FieldName: ="RequestDate"
+                                    FieldDisplayName: ="Số lượng"
+                                    FieldName: ="quantity"
                                     Order: =2
-                                    Text: =Text(ThisItem.RequestDate, "dd/mm/yyyy")
-                                    Width: =100
-                              - CardType.Column:
-                                  Control: DataTableColumn
-                                  Variant: Textual
-                                  Properties:
-                                    FieldDisplayName: ="Loại thẻ"
-                                    FieldName: ="CardType"
-                                    Order: =3
-                                    Text: =ThisItem.CardType
-                                    Width: =120
-                              - Priority.Column:
-                                  Control: DataTableColumn
-                                  Variant: Textual
-                                  Properties:
-                                    FieldDisplayName: ="Ưu tiên"
-                                    FieldName: ="Priority"
-                                    Order: =4
-                                    Text: |
-                                      =Switch(ThisItem.Priority,
-                                        "High", "Cao",
-                                        "Normal", "Thường", 
-                                        "Low", "Thấp",
-                                        "Thường"
-                                      )
+                                    Text: =Text(ThisItem.quantity)
                                     Width: =80
-                              - JobTitle.Column:
+                              - SuggestedReason.Column:
                                   Control: DataTableColumn
                                   Variant: Textual
                                   Properties:
-                                    FieldDisplayName: ="Chức vụ"
-                                    FieldName: ="JobTitle"
-                                    Order: =5
-                                    Text: =ThisItem.JobTitle
-                                    Width: =150
-                              - Department.Column:
-                                  Control: DataTableColumn
-                                  Variant: Textual
-                                  Properties:
-                                    FieldDisplayName: ="Phòng ban"
-                                    FieldName: ="Department"
-                                    Order: =6
-                                    Text: =ThisItem.Department
-                                    Width: =180
+                                    FieldDisplayName: ="Lý do cấp"
+                                    FieldName: ="suggestedReason"
+                                    Order: =3
+                                    Text: =Left(ThisItem.suggestedReason, 40) & If(Len(ThisItem.suggestedReason) > 40, "...", "")
+                                    Width: =200
                               - Status.Column:
                                   Control: DataTableColumn
                                   Variant: Textual
                                   Properties:
                                     FieldDisplayName: ="Trạng thái"
-                                    FieldName: ="Status"
-                                    Order: =7
-                                    Text: |
-                                      =Switch(ThisItem.Status,
-                                        "PendingManagerApproval", "Chờ duyệt",
-                                        "PendingHRApproval", "Chờ HR",
-                                        "Approved", "Đã duyệt",
-                                        "Rejected", "Từ chối",
-                                        "Printing", "Đang in",
-                                        "Printed", "Đã in",
-                                        "Distributed", "Đã phát",
-                                        "Không xác định"
-                                      )
+                                    FieldName: ="status"
+                                    Order: =4
+                                    Text: =ThisItem.status
                                     Width: =120
-                              - Notes.Column:
+                              - Note.Column:
                                   Control: DataTableColumn
                                   Variant: Textual
                                   Properties:
                                     FieldDisplayName: ="Ghi chú"
-                                    FieldName: ="Notes"
-                                    Order: =8
-                                    Text: =Left(ThisItem.Notes, 50) & If(Len(ThisItem.Notes) > 50, "...", "")
+                                    FieldName: ="note"
+                                    Order: =5
+                                    Text: =Left(Coalesce(ThisItem.note, ""), 50) & If(Len(Coalesce(ThisItem.note, "")) > 50, "...", "")
                                     Width: =200
+                              - PrintNote.Column:
+                                  Control: DataTableColumn
+                                  Variant: Textual
+                                  Properties:
+                                    FieldDisplayName: ="Ghi chú in"
+                                    FieldName: ="printNote"
+                                    Order: =6
+                                    Text: =Left(Coalesce(ThisItem.printNote, ""), 30) & If(Len(Coalesce(ThisItem.printNote, "")) > 30, "...", "")
+                                    Width: =150
                         - DataTable.Selection.Handler:
                             Control: Rectangle
                             Properties:
@@ -419,7 +377,7 @@ Screens:
                                     BorderColor: =RGBA(0, 0, 0, 0)
                                     Color: =Colors.TextPrimary
                                     DisplayMode: |
-                                      =If(varSelectedRequest.Status = "PendingManagerApproval", DisplayMode.Edit, DisplayMode.Disabled)
+                                      =If(varSelectedRequest.status = "Chờ duyệt", DisplayMode.Edit, DisplayMode.Disabled)
                                     Fill: =RGBA(0, 0, 0, 0)
                                     HoverFill: =Colors.BackgroundLight
                                     OnSelect: |
@@ -501,112 +459,57 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.1
                 Children:
-                  - CardType.Label:
+                  - Quantity.Label:
                       Control: Label
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Semibold
                         Height: =Parent.Height * 0.08
                         Size: =FontSizes.Medium
-                        Text: ="Loại thẻ tên *"
+                        Text: ="Số lượng *"
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.05
                         Y: =Parent.Height * 0.05
-                  - CardType.Dropdown:
-                      Control: DropDown
-                      Properties:
-                        BorderColor: =Colors.Border
-                        DefaultSelectedItems: |
-                          =If(varFormMode = "Edit", Filter(Table({Name: "Standard"}, {Name: "Executive"}, {Name: "Temporary"}), Name = varEditingRequest.CardType), Table({Name: "Standard"}))
-                        Fill: =Colors.White
-                        Height: =Styles.Input.Height
-                        Items: |
-                          =Table(
-                          {Name: "Standard", Description: "Thẻ tên tiêu chuẩn"},
-                          {Name: "Executive", Description: "Thẻ tên cấp quản lý"},
-                          {Name: "Temporary", Description: "Thẻ tên tạm thời"}
-                          )
-                        Width: =Parent.Width * 0.4
-                        X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.13
-                  - Priority.Label:
-                      Control: Label
-                      Properties:
-                        Color: =Colors.TextPrimary
-                        FontWeight: =FontWeight.Semibold
-                        Height: =Parent.Height * 0.08
-                        Size: =FontSizes.Medium
-                        Text: ="Mức độ ưu tiên *"
-                        Width: =Parent.Width * 0.4
-                        X: =Parent.Width * 0.55
-                        Y: =Parent.Height * 0.05
-                  - Priority.Dropdown:
-                      Control: DropDown
-                      Properties:
-                        BorderColor: =Colors.Border
-                        DefaultSelectedItems: |
-                          =If(varFormMode = "Edit", Filter(Table({Name: "Low"}, {Name: "Normal"}, {Name: "High"}), Name = varEditingRequest.Priority), Table({Name: "Normal"}))
-                        Fill: =Colors.White
-                        Height: =Styles.Input.Height
-                        Items: |
-                          =Table(
-                          {Name: "Low", Description: "Mức độ thấp"},
-                          {Name: "Normal", Description: "Mức độ thường"},
-                          {Name: "High", Description: "Mức độ cao"}
-                          )
-                        Width: =Parent.Width * 0.4
-                        X: =Parent.Width * 0.55
-                        Y: =Parent.Height * 0.13
-                  - JobTitle.Label:
-                      Control: Label
-                      Properties:
-                        Color: =Colors.TextPrimary
-                        FontWeight: =FontWeight.Semibold
-                        Height: =Parent.Height * 0.08
-                        Size: =FontSizes.Medium
-                        Text: ="Chức vụ hiển thị *"
-                        Width: =Parent.Width * 0.4
-                        X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.25
-                  - JobTitle.Input:
+                  - Quantity.Input:
                       Control: Classic/TextInput
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Colors.TextPrimary
-                        Default: =If(varFormMode = "Edit", varEditingRequest.JobTitle, varCurrentEmployee.FullName)
+                        Default: =If(varFormMode = "Edit", Text(varEditingRequest.quantity), "1")
                         Fill: =Colors.White
                         FocusedBorderColor: =Colors.Primary
+                        Format: =TextFormat.Number
                         Height: =Styles.Input.Height
-                        HintText: ="Nhập chức vụ hiển thị trên thẻ"
+                        HintText: ="Nhập số lượng thẻ cần cấp"
                         Size: =FontSizes.Base
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.33
-                  - Department.Form.Label:
+                        Y: =Parent.Height * 0.13
+                  - SuggestedReason.Label:
                       Control: Label
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Semibold
                         Height: =Parent.Height * 0.08
                         Size: =FontSizes.Medium
-                        Text: ="Phòng ban hiển thị *"
+                        Text: ="Lý do cấp *"
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.55
-                        Y: =Parent.Height * 0.25
-                  - Department.Input:
+                        Y: =Parent.Height * 0.05
+                  - SuggestedReason.Input:
                       Control: Classic/TextInput
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Colors.TextPrimary
-                        Default: =If(varFormMode = "Edit", varEditingRequest.Department, varCurrentEmployee.Department)
+                        Default: =If(varFormMode = "Edit", varEditingRequest.suggestedReason, "")
                         Fill: =Colors.White
                         FocusedBorderColor: =Colors.Primary
                         Height: =Styles.Input.Height
-                        HintText: ="Nhập phòng ban hiển thị trên thẻ"
+                        HintText: ="Nhập lý do cấp thẻ tên"
                         Size: =FontSizes.Base
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.55
-                        Y: =Parent.Height * 0.33
+                        Y: =Parent.Height * 0.13
                   - Notes.Label:
                       Control: Label
                       Properties:
@@ -617,13 +520,13 @@ Screens:
                         Text: ="Ghi chú"
                         Width: =Parent.Width * 0.9
                         X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.45
+                        Y: =Parent.Height * 0.25
                   - Notes.Input:
                       Control: Classic/TextInput
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Colors.TextPrimary
-                        Default: =If(varFormMode = "Edit", varEditingRequest.Notes, "")
+                        Default: =If(varFormMode = "Edit", Coalesce(varEditingRequest.note, ""), "")
                         Fill: =Colors.White
                         FocusedBorderColor: =Colors.Primary
                         Height: =Parent.Height * 0.15
@@ -632,7 +535,7 @@ Screens:
                         Size: =FontSizes.Base
                         Width: =Parent.Width * 0.9
                         X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.53
+                        Y: =Parent.Height * 0.33
             - Form.Footer:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -663,7 +566,7 @@ Screens:
                         BorderColor: =Colors.Primary
                         Color: =Styles.Button.Primary.Color
                         DisplayMode: |
-                          =If(And(Not(IsBlank('CardType.Dropdown'.Selected.Result.Name)), Not(IsBlank('JobTitle.Input'.Text)), Not(IsBlank('Department.Input'.Text))), DisplayMode.Edit, DisplayMode.Disabled)
+                          =If(And(Not(IsBlank('Quantity.Input'.Text)), Value('Quantity.Input'.Text) > 0, Not(IsBlank('SuggestedReason.Input'.Text))), DisplayMode.Edit, DisplayMode.Disabled)
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
@@ -673,66 +576,48 @@ Screens:
                           If(varFormMode = "Create",
                             // CREATE - Try SharePoint first, fallback to collection
                             IfError(
-                              Patch(NameCardRequest, Defaults(NameCardRequest), {
-                                EmployeeId: varCurrentEmployee.Id,
-                                EmployeeName: varCurrentEmployee.FullName,
-                                RequestDate: Today(),
-                                CardType: 'CardType.Dropdown'.Selected.Result.Name,
-                                Department: 'Department.Input'.Text,
-                                JobTitle: 'JobTitle.Input'.Text,
-                                Status: "PendingManagerApproval",
-                                ApprovalDate: Blank(),
-                                RequestedBy: varCurrentEmployee.FullName,
-                                PrintStatus: "NotPrinted",
-                                DistributionDate: Blank(),
-                                Notes: 'Notes.Input'.Text,
-                                Priority: 'Priority.Dropdown'.Selected.Result.Name
+                              Patch(NamecardRequest_1, Defaults(NamecardRequest_1), {
+                                userID: varCurrentEmployee.userID,
+                                quantity: Value('Quantity.Input'.Text),
+                                suggestedReason: 'SuggestedReason.Input'.Text,
+                                note: 'Notes.Input'.Text,
+                                status: "Chờ duyệt",
+                                printNote: ""
                               });
                               // Refresh collection from SharePoint
                               ClearCollect(colNameCardRequests, 
-                                Filter(NameCardRequest, EmployeeId = varCurrentEmployee.Id)
+                                Filter(NamecardRequest_1, userID = varCurrentEmployee.userID)
                               ),
                               // Fallback to collection if SharePoint fails
                               Collect(colNameCardRequests, {
-                                Id: Max(colNameCardRequests, Id) + 1,
-                                EmployeeId: varCurrentEmployee.Id,
-                                EmployeeName: varCurrentEmployee.FullName,
-                                RequestDate: Today(),
-                                CardType: 'CardType.Dropdown'.Selected.Result.Name,
-                                Department: 'Department.Input'.Text,
-                                JobTitle: 'JobTitle.Input'.Text,
-                                Status: "PendingManagerApproval",
-                                ApprovalDate: Blank(),
-                                RequestedBy: varCurrentEmployee.FullName,
-                                PrintStatus: "NotPrinted",
-                                DistributionDate: Blank(),
-                                Notes: 'Notes.Input'.Text,
-                                Priority: 'Priority.Dropdown'.Selected.Result.Name
+                                requestID: Max(colNameCardRequests, requestID) + 1,
+                                userID: varCurrentEmployee.userID,
+                                quantity: Value('Quantity.Input'.Text),
+                                suggestedReason: 'SuggestedReason.Input'.Text,
+                                note: 'Notes.Input'.Text,
+                                status: "Chờ duyệt",
+                                printNote: ""
                               });
                               Notify("Lưu offline - sẽ đồng bộ khi có kết nối", NotificationType.Warning)
                             ),
                             // EDIT - Try SharePoint first, fallback to collection
                             IfError(
-                              Patch(NameCardRequest, 
-                                LookUp(NameCardRequest, Id = varEditingRequest.Id), {
-                                  CardType: 'CardType.Dropdown'.Selected.Result.Name,
-                                  Department: 'Department.Input'.Text,
-                                  JobTitle: 'JobTitle.Input'.Text,
-                                  Notes: 'Notes.Input'.Text,
-                                  Priority: 'Priority.Dropdown'.Selected.Result.Name
+                              Patch(NamecardRequest_1, 
+                                LookUp(NamecardRequest_1, requestID = varEditingRequest.requestID), {
+                                  quantity: Value('Quantity.Input'.Text),
+                                  suggestedReason: 'SuggestedReason.Input'.Text,
+                                  note: 'Notes.Input'.Text
                                 }
                               );
                               // Refresh collection from SharePoint
                               ClearCollect(colNameCardRequests, 
-                                Filter(NameCardRequest, EmployeeId = varCurrentEmployee.Id)
+                                Filter(NamecardRequest_1, userID = varCurrentEmployee.userID)
                               ),
                               // Fallback to collection update
-                              UpdateIf(colNameCardRequests, Id = varEditingRequest.Id, {
-                                CardType: 'CardType.Dropdown'.Selected.Result.Name,
-                                Department: 'Department.Input'.Text,
-                                JobTitle: 'JobTitle.Input'.Text,
-                                Notes: 'Notes.Input'.Text,
-                                Priority: 'Priority.Dropdown'.Selected.Result.Name
+                              UpdateIf(colNameCardRequests, requestID = varEditingRequest.requestID, {
+                                quantity: Value('Quantity.Input'.Text),
+                                suggestedReason: 'SuggestedReason.Input'.Text,
+                                note: 'Notes.Input'.Text
                               });
                               Notify("Cập nhật offline - sẽ đồng bộ khi có kết nối", NotificationType.Warning)
                             )
@@ -743,10 +628,10 @@ Screens:
                           
                           UpdateContext({
                             statsData: {
-                              TotalRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id)),
-                              PendingRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "PendingManagerApproval")),
-                              ApprovedRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "Approved")),
-                              RejectedRequests: CountRows(Filter(colNameCardRequests, EmployeeId = varCurrentEmployee.Id && Status = "Rejected"))
+                              TotalRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID)),
+                              PendingRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Chờ duyệt")),
+                              ApprovedRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Đã duyệt")),
+                              RejectedRequests: CountRows(Filter(colNameCardRequests, userID = varCurrentEmployee.userID && status = "Từ chối"))
                             }
                           });
                           
@@ -817,140 +702,102 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.12
                 Children:
-                  - Details.Info.Container:
-                      Control: GroupContainer
-                      Variant: ManualLayout
-                      Properties:
-                        BorderColor: =Colors.BorderLight
-                        BorderThickness: =1
-                        Fill: =Colors.BackgroundLight
-                        Height: =Parent.Height * 0.9
-                        Width: =Parent.Width * 0.9
-                        X: =Parent.Width * 0.05
-                        Y: =Parent.Height * 0.05
-                      Children:
-                        - Request.ID.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Bold
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: |
-                                =Concatenate("Mã yêu cầu:YC-", Text(varSelectedRequest.Id, "000"))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.05
-                        - Request.Date.Detail_1:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Ngày tạo:", Text(varSelectedRequest.RequestDate, "dd/mm/yyyy"))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.5
-                              Y: =Parent.Height * 0.05
-                        - Card.Type.Detail_1:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Loại thẻ:", varSelectedRequest.CardType)
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.15
-                        - Priority.Detail_1:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Độ ưu tiên:", Switch(varSelectedRequest.Priority, "High", "Cao", "Normal", "Thường", "Low", "Thấp", "Thường"))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.5
-                              Y: =Parent.Height * 0.15
-                        - Job.Title.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Chức vụ:", varSelectedRequest.JobTitle)
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.25
-                        - Department.Detail_1:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Phòng ban:", varSelectedRequest.Department)
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.5
-                              Y: =Parent.Height * 0.25
-                        - Status.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Trạng thái:", Switch(varSelectedRequest.Status, "PendingManagerApproval", "Chờ duyệt", "Approved", "Đã duyệt", "Rejected", "Từ chối", varSelectedRequest.Status))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.35
-                        - Approval.Date.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: |
-                                =If(IsBlank(varSelectedRequest.ApprovalDate), "Ngày duyệt:Chưa duyệt", Concatenate("Ngày duyệt:", Text(varSelectedRequest.ApprovalDate, "dd/mm/yyyy")))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.5
-                              Y: =Parent.Height * 0.35
-                        - Print.Status.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =Concatenate("Trạng thái in:", If(varSelectedRequest.PrintStatus = "Printed", "Đã in", "Chưa in"))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.45
-                        - Distribution.Date.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: =If(IsBlank(varSelectedRequest.DistributionDate), "Ngày phát:Chưa phát", Concatenate("Ngày phát:", Text(varSelectedRequest.DistributionDate, "dd/mm/yyyy")))
-                              Width: =Parent.Width * 0.45
-                              X: =Parent.Width * 0.5
-                              Y: =Parent.Height * 0.45
-                        - Notes.Label.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextPrimary
-                              FontWeight: =FontWeight.Semibold
-                              Height: =Parent.Height * 0.08
-                              Size: =FontSizes.Base
-                              Text: ="Ghi chú:"
-                              Width: =Parent.Width * 0.9
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.55
-                        - Notes.Content.Detail:
-                            Control: Label
-                            Properties:
-                              Color: =Colors.TextMuted
-                              Height: =Parent.Height * 0.3
-                              Size: =FontSizes.Base
-                              Text: =If(IsBlank(varSelectedRequest.Notes), "Không có ghi chú", varSelectedRequest.Notes)
-                              VerticalAlign: =VerticalAlign.Top
-                              Width: =Parent.Width * 0.9
-                              X: =Parent.Width * 0.05
-                              Y: =Parent.Height * 0.63
+                      - Details.Info.Container:
+                          Control: GroupContainer
+                          Variant: ManualLayout
+                          Properties:
+                            BorderColor: =Colors.BorderLight
+                            BorderThickness: =1
+                            Fill: =Colors.BackgroundLight
+                            Height: =Parent.Height * 0.9
+                            Width: =Parent.Width * 0.9
+                            X: =Parent.Width * 0.05
+                            Y: =Parent.Height * 0.05
+                          Children:
+                            - Request.ID.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  FontWeight: =FontWeight.Bold
+                                  Height: =Parent.Height * 0.1
+                                  Size: =FontSizes.Base
+                                  Text: |
+                                    =Concatenate("Mã yêu cầu: YC-", Text(varSelectedRequest.requestID, "000"))
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.05
+                            - Quantity.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  Height: =Parent.Height * 0.08
+                                  Size: =FontSizes.Base
+                                  Text: =Concatenate("Số lượng: ", Text(varSelectedRequest.quantity))
+                                  Width: =Parent.Width * 0.45
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.18
+                            - Status.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  Height: =Parent.Height * 0.08
+                                  Size: =FontSizes.Base
+                                  Text: =Concatenate("Trạng thái: ", varSelectedRequest.status)
+                                  Width: =Parent.Width * 0.45
+                                  X: =Parent.Width * 0.5
+                                  Y: =Parent.Height * 0.18
+                            - SuggestedReason.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  Height: =Parent.Height * 0.15
+                                  Size: =FontSizes.Base
+                                  Text: =Concatenate("Lý do cấp: ", varSelectedRequest.suggestedReason)
+                                  VerticalAlign: =VerticalAlign.Top
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.28
+                            - Notes.Label.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  FontWeight: =FontWeight.Semibold
+                                  Height: =Parent.Height * 0.08
+                                  Size: =FontSizes.Base
+                                  Text: ="Ghi chú:"
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.45
+                            - Notes.Content.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextMuted
+                                  Height: =Parent.Height * 0.15
+                                  Size: =FontSizes.Base
+                                  Text: =If(IsBlank(varSelectedRequest.note), "Không có ghi chú", varSelectedRequest.note)
+                                  VerticalAlign: =VerticalAlign.Top
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.53
+                            - PrintNote.Label.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextPrimary
+                                  FontWeight: =FontWeight.Semibold
+                                  Height: =Parent.Height * 0.08
+                                  Size: =FontSizes.Base
+                                  Text: ="Ghi chú in ấn:"
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.7
+                            - PrintNote.Content.Detail:
+                                Control: Label
+                                Properties:
+                                  Color: =Colors.TextMuted
+                                  Height: =Parent.Height * 0.15
+                                  Size: =FontSizes.Base
+                                  Text: =If(IsBlank(varSelectedRequest.printNote), "Chưa có ghi chú in ấn", varSelectedRequest.printNote)
+                                  VerticalAlign: =VerticalAlign.Top
+                                  Width: =Parent.Width * 0.9
+                                  X: =Parent.Width * 0.05
+                                  Y: =Parent.Height * 0.78
