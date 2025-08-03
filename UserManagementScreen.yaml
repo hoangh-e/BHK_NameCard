@@ -4,32 +4,48 @@ Screens:
       Fill: =Colors.BackgroundLight
       OnVisible: |
         =// Load SharePoint data first
-        ClearCollect(colDepartments, Department_1);
-        ClearCollect(colRoles, Role_1);
-        ClearCollect(colUsers, 
-          AddColumns(
-            AddColumns(User_1, 
-              Department, LookUp(Department_1, departmentID = ThisRecord.departmentID).name
-            ),
-            Role, LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
-          )
-        );
-        // Reset form states
-        Set(varShowUserForm, false);
-        Set(varFormMode, "Add");
-        Set(varEditingUser, Blank());
-        Set(varSelectedUser, Blank());
-        Set(varDeleteConfirm, false);
-        Set(varLoadingUsers, false);
-        Set(varErrorMessage, "");
-        Set(varShowUserDetail, false);
-        Set(varDetailFormMode, "View");
-        Set(varShowContextMenu, false);
-        Set(varContextMenuX, 0);
-        Set(varContextMenuY, 0)
+          ClearCollect(colDepartments, Department_1);
+          ClearCollect(colRoles, Role_1);
+          ClearCollect(colUserRoles, User_Role);
+
+          ClearCollect(colUsersRaw, User_1);
+
+          ClearCollect(
+              colUsersWithDept,
+              AddColumns(
+                  colUsersRaw,
+                  Department,
+                  LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
+              )
+          );
+
+          ClearCollect(
+              colUsers,
+              AddColumns(
+                  colUsersWithDept,
+                  Role,
+                  LookUp(
+                      colRoles,
+                      roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID
+                  ).name
+              )
+          );
+            // Reset form states
+            Set(varShowUserForm, false);
+            Set(varFormMode, "Add");
+            Set(varEditingUser, Blank());
+            Set(varSelectedUser, Blank());
+            Set(varDeleteConfirm, false);
+            Set(varLoadingUsers, false);
+            Set(varErrorMessage, "");
+            Set(varShowUserDetail, false);
+            Set(varDetailFormMode, "View");
+            Set(varShowContextMenu, false);
+            Set(varContextMenuX, 0);
+            Set(varContextMenuY, 0)
     Children:
       - Main.Content.Container_3:
-          Control: GroupContainer@1.3.0
+          Control: GroupContainer
           Variant: ManualLayout
           Properties:
             Fill: =Colors.BackgroundLight
@@ -39,7 +55,7 @@ Screens:
             Y: =Styles.Header.Height
           Children:
             - Page.Header.Section_3:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -47,7 +63,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Page.Title_3:
-                      Control: Label@2.5.1
+                      Control: Label
                       Properties:
                         Color: =Colors.TextPrimary
                         FontWeight: =FontWeight.Bold
@@ -58,7 +74,7 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.25
                   - Add.User.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Primary
                         BorderThickness: =If(varLoadingUsers, 2, 1)
@@ -79,7 +95,7 @@ Screens:
                         X: =Parent.Width - Parent.Width * 0.25
                         Y: =Parent.Height * 0.2
             - Users.List.Section:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.BackgroundLight
@@ -88,7 +104,7 @@ Screens:
                   Y: =86.15999999999997
                 Children:
                   - Search.Filter.Bar:
-                      Control: GroupContainer@1.3.0
+                      Control: GroupContainer
                       Variant: ManualLayout
                       Properties:
                         BorderColor: =Colors.BorderLight
@@ -100,7 +116,7 @@ Screens:
                         Y: =Parent.Height * 0.02
                       Children:
                         - Search.Input_1:
-                            Control: Classic/TextInput@2.3.2
+                            Control: Classic/TextInput
                             Properties:
                               BorderColor: =If(Self.Focused, Colors.Primary, If(IsBlank(Self.Text), Colors.Border, Colors.Success))
                               BorderThickness: =If(Self.Focused, InteractionStates.Input.Focus.BorderWidth, InteractionStates.Input.Normal.BorderWidth)
@@ -116,7 +132,7 @@ Screens:
                               X: =Parent.Width * 0.02
                               Y: =Parent.Height * 0.2
                         - Department.Filter_1:
-                            Control: Classic/DropDown@2.3.1
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =Colors.Border
                               Default: ="Tất cả"
@@ -134,7 +150,7 @@ Screens:
                               X: =Parent.Width * 0.4
                               Y: =Parent.Height * 0.2
                         - Role.Filter:
-                            Control: Classic/DropDown@2.3.1
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =Colors.Border
                               Default: ="Tất cả"
@@ -152,7 +168,7 @@ Screens:
                               X: =Parent.Width * 0.68
                               Y: =Parent.Height * 0.2
                         - View.Selected.Button:
-                            Control: Classic/Button@2.2.0
+                            Control: Classic/Button
                             Properties:
                               BorderColor: =Colors.Success
                               Color: =Colors.Success
@@ -171,7 +187,7 @@ Screens:
                               X: =931.634
                               Y: =Parent.Height * 0.2
                   - Users.Data.Table:
-                      Control: GroupContainer@1.3.0
+                      Control: GroupContainer
                       Variant: ManualLayout
                       Properties:
                         BorderColor: =Colors.BorderLight
@@ -183,7 +199,7 @@ Screens:
                         Y: =Parent.Height * 0.12
                       Children:
                         - DataTable.Selection.Handler:
-                            Control: Rectangle@2.3.0
+                            Control: Rectangle
                             Properties:
                               Fill: =RGBA(0, 0, 0, 0)
                               Height: =537.064
@@ -197,10 +213,9 @@ Screens:
                                     Set(varShowContextMenu, true)
                                 )
                               Width: =1096.04
-                              X: ='Users.DataTable'.X
-                              Y: ='Users.DataTable'.Y
+                              Y: =0.06399999999996453
                         - User.Context.Menu:
-                            Control: GroupContainer@1.3.0
+                            Control: GroupContainer
                             Variant: ManualLayout
                             Properties:
                               BorderColor: =Colors.Border
@@ -213,7 +228,7 @@ Screens:
                               Y: =varContextMenuY
                             Children:
                               - View.Context.Button:
-                                  Control: Classic/Button@2.2.0
+                                  Control: Classic/Button
                                   Properties:
                                     BorderColor: =RGBA(0, 0, 0, 0)
                                     Color: =Colors.TextPrimary
@@ -227,7 +242,7 @@ Screens:
                                     Text: "=\"\U0001F441 Xem chi tiết\""
                                     Width: =Parent.Width
                               - Edit.Context.Button:
-                                  Control: Classic/Button@2.2.0
+                                  Control: Classic/Button
                                   Properties:
                                     BorderColor: =RGBA(0, 0, 0, 0)
                                     Color: =Colors.TextPrimary
@@ -243,7 +258,7 @@ Screens:
                                     Width: =Parent.Width
                                     Y: =40
                               - Delete.Context.Button:
-                                  Control: Classic/Button@2.2.0
+                                  Control: Classic/Button
                                   Properties:
                                     BorderColor: =RGBA(0, 0, 0, 0)
                                     Color: =Colors.Error
@@ -257,95 +272,81 @@ Screens:
                                     Width: =Parent.Width
                                     Y: =80
       - Users.DataTable:
-          Control: DataTable@1.0.3
+          Control: DataTable
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
-            Color: =Colors.TextPrimary
-            Fill: =Colors.White
+            Color: =RGBA(50, 49, 48, 1)
+            Fill: =RGBA(255, 255, 255, 1)
             Font: =Font.'Segoe UI'
-            HeadingColor: =Colors.White
-            HeadingFill: =Colors.Primary
+            HeadingColor: =RGBA(255, 255, 255, 1)
+            HeadingFill: =RGBA(0, 120, 212, 1)
             HeadingFont: =Font.'Segoe UI'
             Height: =557
-            HoverColor: =Colors.White
-            HoverFill: =ColorFade(Colors.Primary, 90%)
-            Items: |
-              =Filter(colUsers, 
-                And(
-                  Or(IsBlank(varSearchText), varSearchText in "FullName", varSearchText in "Email"),
-                  Or(IsBlank(varSelectedDepartment), Department = varSelectedDepartment),
-                  Or(IsBlank(varSelectedRole), Role = varSelectedRole)
-                )
-              )
-            SelectedColor: =Colors.TextPrimary
-            SelectedFill: =ColorFade(Colors.Primary, 85%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =RGBA(0, 120, 212, 0.1)
+            Items: =colUsers
+            SelectedColor: =RGBA(50, 49, 48, 1)
+            SelectedFill: =RGBA(199, 224, 244, 1)
             Width: =1130
             X: =235
             Y: =210
           Children:
             - FullName.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Họ và tên"
-                  FieldName: ="FullName"
+                  FieldName: ="fullname"
                   Order: =1
                   Text: =ThisItem.fullname
                   Width: =200
             - Email.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Email"
-                  FieldName: ="Email"
+                  FieldName: ="email"
                   Order: =2
                   Text: =ThisItem.email
                   Width: =250
-            - Department.Column:
-                Control: DataTableColumn@1.0.1
-                Variant: Textual
-                Properties:
-                  FieldDisplayName: ="Phòng ban"
-                  FieldName: ="Department"
-                  Order: =3
-                  Text: =ThisItem.Department
-                  Width: =200
             - JobTitle.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Chức vụ"
-                  FieldName: ="JobTitle"
-                  Order: =4
+                  FieldName: ="jobTitle"
+                  Order: =3
                   Text: =ThisItem.jobTitle
                   Width: =150
             - Phone.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Điện thoại"
-                  FieldName: ="Phone"
-                  Order: =5
+                  FieldName: ="phone"
+                  Order: =4
                   Text: =ThisItem.phone
                   Width: =120
             - Role.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Vai trò"
                   FieldName: ="Role"
-                  Order: =6
+                  Order: =5
                   Text: =ThisItem.Role
+                  Width: =150
             - Status.Column:
-                Control: DataTableColumn@1.0.1
+                Control: DataTableColumn
                 Variant: Textual
                 Properties:
                   FieldDisplayName: ="Trạng thái"
                   FieldName: ="Status"
-                  Order: =7
-                  Text: =ThisItem.'Content approval status'
+                  Order: =6
+                  Text: =If(IsBlank(ThisItem.'Content approval status'), "Active", ThisItem.'Content approval status')
+                  Width: =120
       - User.Form.Modal.Overlay:
-          Control: Rectangle@2.3.0
+          Control: Rectangle
           Properties:
             Fill: =Styles.Modal.Overlay
             Height: =Parent.Height
@@ -354,7 +355,7 @@ Screens:
             Visible: =varShowUserForm
             Width: =Parent.Width
       - User.Form.Modal:
-          Control: GroupContainer@1.3.0
+          Control: GroupContainer
           Variant: ManualLayout
           Properties:
             BorderColor: =If(varLoadingUsers, Colors.Primary, Colors.Border)
@@ -367,7 +368,7 @@ Screens:
             Y: =If(varShowUserForm, (Parent.Height - Parent.Height * 0.7) / 2, -Parent.Height * 2)
           Children:
             - Modal.Header_1:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.Primary
@@ -375,7 +376,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Modal.Title_1:
-                      Control: Label@2.5.1
+                      Control: Label
                       Properties:
                         Color: =Colors.White
                         FontWeight: =FontWeight.Bold
@@ -385,7 +386,7 @@ Screens:
                         Width: =Parent.Width * 0.8
                         X: =Parent.Width * 0.04
                   - Modal.Close.Button_1:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.White
                         Color: =Colors.White
@@ -399,7 +400,7 @@ Screens:
                         X: =Parent.Width * 0.9
                         Y: =Parent.Height * 0.2
             - Form.Content_1:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -408,7 +409,7 @@ Screens:
                   Y: =Parent.Height * 0.12
                 Children:
                   - User.Add.Edit.Form:
-                      Control: Form@2.4.4
+                      Control: Form
                       Variant: Classic
                       Layout: Vertical
                       Properties:
@@ -468,13 +469,13 @@ Screens:
                         Width: =Parent.Width
                       Children:
                         - fullname_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicTextualEdit
                             IsLocked: true
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="fullname"
-                              Default: =If(varFormMode = "Edit", varEditingUser.FullName, "")
+                              Default: =If(varFormMode = "Edit", varEditingUser.fullname, "")
                               DisplayName: ="Họ và tên"
                               MaxLength: =DataSourceInfo(%DATACARD_DATASOURCE_NAME.ID%, %DataSourceInfo.RESERVED%.MaxLength, '%DATACARD_FIELD_NAME.ID%')
                               Required: =true
@@ -484,7 +485,7 @@ Screens:
                               Y: =0
                             Children:
                               - DataCardKey1:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -505,7 +506,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue1:
-                                  Control: Classic/TextInput@2.3.2
+                                  Control: Classic/TextInput
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -534,7 +535,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey1.Y + DataCardKey1.Height + 5
                               - ErrorMessage1:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -559,7 +560,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue1.Y + DataCardValue1.Height
                               - StarVisible1:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -580,13 +581,13 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey1.Y
                         - email_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicTextualEdit
                             IsLocked: true
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="email"
-                              Default: =If(varFormMode = "Edit", varEditingUser.Email, "")
+                              Default: =If(varFormMode = "Edit", varEditingUser.email, "")
                               DisplayName: ="Email"
                               MaxLength: =DataSourceInfo(%DATACARD_DATASOURCE_NAME.ID%, %DataSourceInfo.RESERVED%.MaxLength, '%DATACARD_FIELD_NAME.ID%')
                               Required: =true
@@ -596,7 +597,7 @@ Screens:
                               Y: =0
                             Children:
                               - DataCardKey2:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -617,7 +618,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue2:
-                                  Control: Classic/TextInput@2.3.2
+                                  Control: Classic/TextInput
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -647,7 +648,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey2.Y + DataCardKey2.Height + 5
                               - ErrorMessage2:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -672,7 +673,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue2.Y + DataCardValue2.Height
                               - StarVisible2:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -693,7 +694,7 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey2.Y
                         - departmentID_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicComboBoxEdit
                             IsLocked: true
                             Properties:
@@ -708,7 +709,7 @@ Screens:
                               Y: =100
                             Children:
                               - DataCardKey3:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -729,7 +730,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue3:
-                                  Control: Classic/ComboBox@2.4.0
+                                  Control: Classic/ComboBox
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -765,7 +766,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey3.Y + DataCardKey3.Height + 5
                               - ErrorMessage3:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -790,7 +791,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue3.Y + DataCardValue3.Height
                               - StarVisible3:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -811,13 +812,13 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey3.Y
                         - jobTitle_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicTextualEdit
                             IsLocked: true
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="jobTitle"
-                              Default: =If(varFormMode = "Edit", varEditingUser.JobTitle, "")
+                              Default: =If(varFormMode = "Edit", varEditingUser.jobTitle, "")
                               DisplayName: ="Chức vụ"
                               MaxLength: =DataSourceInfo(%DATACARD_DATASOURCE_NAME.ID%, %DataSourceInfo.RESERVED%.MaxLength, '%DATACARD_FIELD_NAME.ID%')
                               Required: =true
@@ -827,7 +828,7 @@ Screens:
                               Y: =100
                             Children:
                               - DataCardKey4:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -848,7 +849,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue4:
-                                  Control: Classic/TextInput@2.3.2
+                                  Control: Classic/TextInput
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -877,7 +878,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey4.Y + DataCardKey4.Height + 5
                               - ErrorMessage4:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -902,7 +903,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue4.Y + DataCardValue4.Height
                               - StarVisible4:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -923,13 +924,13 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey4.Y
                         - phone_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicTextualEdit
                             IsLocked: true
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="phone"
-                              Default: =If(varFormMode = "Edit", varEditingUser.Phone, "")
+                              Default: =If(varFormMode = "Edit", varEditingUser.phone, "")
                               DisplayName: ="Số điện thoại"
                               MaxLength: =DataSourceInfo(%DATACARD_DATASOURCE_NAME.ID%, %DataSourceInfo.RESERVED%.MaxLength, '%DATACARD_FIELD_NAME.ID%')
                               Required: =true
@@ -939,7 +940,7 @@ Screens:
                               Y: =200
                             Children:
                               - DataCardKey5:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -960,7 +961,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue5:
-                                  Control: Classic/TextInput@2.3.2
+                                  Control: Classic/TextInput
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -990,7 +991,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey5.Y + DataCardKey5.Height + 5
                               - ErrorMessage5:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -1015,7 +1016,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue5.Y + DataCardValue5.Height
                               - StarVisible5:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -1036,7 +1037,7 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey5.Y
                         - roleID_DataCard:
-                            Control: TypedDataCard@1.0.7
+                            Control: TypedDataCard
                             Variant: ClassicComboBoxEdit
                             IsLocked: true
                             Properties:
@@ -1051,7 +1052,7 @@ Screens:
                               Y: =200
                             Children:
                               - DataCardKey6:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldName
                                   Properties:
                                     AutoHeight: =true
@@ -1072,7 +1073,7 @@ Screens:
                                     X: =30
                                     Y: =10
                               - DataCardValue6:
-                                  Control: Classic/ComboBox@2.4.0
+                                  Control: Classic/ComboBox
                                   MetadataKey: FieldValue
                                   Properties:
                                     BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
@@ -1108,7 +1109,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardKey6.Y + DataCardKey6.Height + 5
                               - ErrorMessage6:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: ErrorMessage
                                   Properties:
                                     AutoHeight: =true
@@ -1133,7 +1134,7 @@ Screens:
                                     X: =30
                                     Y: =DataCardValue6.Y + DataCardValue6.Height
                               - StarVisible6:
-                                  Control: Label@2.5.1
+                                  Control: Label
                                   MetadataKey: FieldRequired
                                   Properties:
                                     Align: =Align.Center
@@ -1154,7 +1155,7 @@ Screens:
                                     Wrap: =false
                                     Y: =DataCardKey6.Y
             - Form.Footer_1:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   BorderColor: =Colors.BorderLight
@@ -1165,7 +1166,7 @@ Screens:
                   Y: =Parent.Height * 0.88
                 Children:
                   - Cancel.Button_1:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Styles.Button.Secondary.Color
@@ -1181,7 +1182,7 @@ Screens:
                         X: =Parent.Width * 0.55
                         Y: =Parent.Height * 0.2
                   - Save.Button_1:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Primary
                         Color: =Styles.Button.Primary.Color
@@ -1197,7 +1198,7 @@ Screens:
                         X: =Parent.Width * 0.75
                         Y: =Parent.Height * 0.2
       - Delete.Modal.Overlay:
-          Control: Rectangle@2.3.0
+          Control: Rectangle
           Properties:
             Fill: =Styles.Modal.Overlay
             Height: =Parent.Height
@@ -1206,7 +1207,7 @@ Screens:
             Visible: =varDeleteConfirm
             Width: =Parent.Width
       - Delete.Confirmation.Modal:
-          Control: GroupContainer@1.3.0
+          Control: GroupContainer
           Variant: ManualLayout
           Properties:
             Fill: =Colors.White
@@ -1217,7 +1218,7 @@ Screens:
             Y: =If(varDeleteConfirm, (Parent.Height - Parent.Height * 0.3) / 2, -Parent.Height)
           Children:
             - Confirm.Header:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.Error
@@ -1225,7 +1226,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Confirm.Title:
-                      Control: Label@2.5.1
+                      Control: Label
                       Properties:
                         Align: =Align.Center
                         Color: =Colors.White
@@ -1235,7 +1236,7 @@ Screens:
                         Text: ="Xác nhận xóa người dùng"
                         Width: =Parent.Width
             - Confirm.Content:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -1244,17 +1245,17 @@ Screens:
                   Y: =Parent.Height * 0.25
                 Children:
                   - Confirm.Message:
-                      Control: Label@2.5.1
+                      Control: Label
                       Properties:
                         Align: =Align.Center
                         Color: =Colors.TextPrimary
                         Height: =Parent.Height
                         Size: =FontSizes.Base
-                        Text: =Concatenate("Bạn có chắc chắn muốn xóa người dùng ", varSelectedUser.FullName, "?")
+                        Text: =Concatenate("Bạn có chắc chắn muốn xóa người dùng ", varSelectedUser.fullname, "?")
                         Width: =Parent.Width * 0.9
                         X: =Parent.Width * 0.05
             - Confirm.Footer:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.BackgroundLight
@@ -1263,7 +1264,7 @@ Screens:
                   Y: =Parent.Height * 0.75
                 Children:
                   - Confirm.Cancel.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Styles.Button.Secondary.Color
@@ -1278,7 +1279,7 @@ Screens:
                         X: =Parent.Width * 0.3
                         Y: =Parent.Height * 0.2
                   - Confirm.Delete.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Error
                         Color: =Styles.Button.Danger.Color
@@ -1295,7 +1296,7 @@ Screens:
                         X: =Parent.Width * 0.55
                         Y: =Parent.Height * 0.2
       - User.Detail.Modal.Overlay:
-          Control: Rectangle@2.3.0
+          Control: Rectangle
           Properties:
             Fill: =Styles.Modal.Overlay
             Height: =Parent.Height
@@ -1304,7 +1305,7 @@ Screens:
             Visible: =varShowUserDetail
             Width: =Parent.Width
       - User.Detail.Modal:
-          Control: GroupContainer@1.3.0
+          Control: GroupContainer
           Variant: ManualLayout
           Properties:
             BorderColor: =Colors.Border
@@ -1317,7 +1318,7 @@ Screens:
             Y: =If(varShowUserDetail, (Parent.Height - Parent.Height * 0.7) / 2, -Parent.Height * 2)
           Children:
             - Detail.Modal.Header:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.Primary
@@ -1325,7 +1326,7 @@ Screens:
                   Width: =Parent.Width
                 Children:
                   - Detail.Modal.Title:
-                      Control: Label@2.5.1
+                      Control: Label
                       Properties:
                         Color: =Colors.White
                         FontWeight: =FontWeight.Bold
@@ -1335,7 +1336,7 @@ Screens:
                         Width: =Parent.Width * 0.6
                         X: =Parent.Width * 0.04
                   - Edit.Toggle.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.White
                         Color: =Colors.White
@@ -1354,7 +1355,7 @@ Screens:
                         X: =Parent.Width * 0.6
                         Y: =Parent.Height * 0.2
                   - Detail.Modal.Close.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.White
                         Color: =Colors.White
@@ -1369,7 +1370,7 @@ Screens:
                         X: =Parent.Width * 0.9
                         Y: =Parent.Height * 0.2
             - Detail.Form.Content:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   Fill: =Colors.White
@@ -1378,7 +1379,7 @@ Screens:
                   Y: =Parent.Height * 0.12
                 Children:
                   - Detail.Form.Fields.Container:
-                      Control: GroupContainer@1.3.0
+                      Control: GroupContainer
                       Variant: ManualLayout
                       Properties:
                         Fill: =Colors.White
@@ -1386,7 +1387,7 @@ Screens:
                         Width: =Parent.Width
                       Children:
                         - Detail.FullName.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1397,7 +1398,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =20
                         - Detail.FullName.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1405,16 +1406,16 @@ Screens:
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
-                              Text: =varSelectedUser.FullName
+                              Text: =varSelectedUser.fullname
                               Visible: =varDetailFormMode = "View"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.05
                               Y: =45
                         - Detail.FullName.Input:
-                            Control: Classic/TextInput@2.3.2
+                            Control: Classic/TextInput
                             Properties:
                               BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              Default: =varSelectedUser.FullName
+                              Default: =varSelectedUser.fullname
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1422,7 +1423,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =45
                         - Detail.Email.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1433,7 +1434,7 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =20
                         - Detail.Email.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1441,16 +1442,17 @@ Screens:
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
-                              Text: =varSelectedUser.Email
+                              Text: =varSelectedUser.email
                               Visible: =varDetailFormMode = "View"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.55
                               Y: =45
                         - Detail.Email.Input:
-                            Control: Classic/TextInput@2.3.2
+                            Control: Classic/TextInput
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              Default: =varSelectedUser.Email
+                              BorderColor: =Colors.Primary
+                              Default: =varSelectedUser.email
+                              FocusedBorderColor: =Color.White
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1458,7 +1460,7 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =45
                         - Detail.Department.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1469,7 +1471,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =95
                         - Detail.Department.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1483,20 +1485,20 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =120
                         - Detail.Department.Dropdown:
-                            Control: Classic/DropDown@2.3.1
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
                               Default: =varSelectedUser.Department
                               Height: =Styles.Input.Height
-                              Items: =Department_1.name
-                              Items.Value: =name
+                              Items: =Department_1
+                              Items.Value: =Title
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.05
                               Y: =120
                         - Detail.JobTitle.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1507,7 +1509,7 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =95
                         - Detail.JobTitle.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1515,16 +1517,16 @@ Screens:
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
-                              Text: =varSelectedUser.JobTitle
+                              Text: =varSelectedUser.jobTitle
                               Visible: =varDetailFormMode = "View"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.55
                               Y: =120
                         - Detail.JobTitle.Input:
-                            Control: Classic/TextInput@2.3.2
+                            Control: Classic/TextInput
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              Default: =varSelectedUser.JobTitle
+                              BorderColor: =If(Self., Colors.Primary, Colors.Border)
+                              Default: =varSelectedUser.jobTitle
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1532,7 +1534,7 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =120
                         - Detail.Phone.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1543,7 +1545,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =170
                         - Detail.Phone.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1551,16 +1553,16 @@ Screens:
                               Fill: =If(varDetailFormMode = "View", Colors.BackgroundLight, Colors.White)
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
-                              Text: =varSelectedUser.Phone
+                              Text: =varSelectedUser.phone
                               Visible: =varDetailFormMode = "View"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.05
                               Y: =195
                         - Detail.Phone.Input:
-                            Control: Classic/TextInput@2.3.2
+                            Control: Classic/TextInput
                             Properties:
                               BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
-                              Default: =varSelectedUser.Phone
+                              Default: =varSelectedUser.phone
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1568,7 +1570,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =195
                         - Detail.Role.Label:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               Color: =Colors.TextPrimary
                               FontWeight: =FontWeight.Semibold
@@ -1579,7 +1581,7 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =170
                         - Detail.Role.Display:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               BorderColor: =Colors.Border
                               BorderThickness: =If(varDetailFormMode = "View", 1, 0)
@@ -1593,20 +1595,21 @@ Screens:
                               X: =Parent.Width * 0.55
                               Y: =195
                         - Detail.Role.Dropdown:
-                            Control: Classic/DropDown@2.3.1
+                            Control: Classic/DropDown
                             Properties:
                               BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
                               Default: =varSelectedUser.Role
                               Height: =Styles.Input.Height
                               Items: =Role_1.name
                               Items.Value: =name
+                              OnSelect: =Self.Bỏ
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
                               X: =Parent.Width * 0.55
                               Y: =195
                         - Detail.Error.Message:
-                            Control: Label@2.5.1
+                            Control: Label
                             Properties:
                               AutoHeight: =true
                               Color: =Colors.Error
@@ -1619,7 +1622,7 @@ Screens:
                               X: =Parent.Width * 0.05
                               Y: =240
             - Detail.Form.Footer:
-                Control: GroupContainer@1.3.0
+                Control: GroupContainer
                 Variant: ManualLayout
                 Properties:
                   BorderColor: =Colors.BorderLight
@@ -1631,7 +1634,7 @@ Screens:
                   Y: =Parent.Height * 0.88
                 Children:
                   - Detail.Cancel.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Border
                         Color: =Styles.Button.Secondary.Color
@@ -1647,7 +1650,7 @@ Screens:
                         X: =Parent.Width * 0.55
                         Y: =Parent.Height * 0.2
                   - Detail.Save.Button:
-                      Control: Classic/Button@2.2.0
+                      Control: Classic/Button
                       Properties:
                         BorderColor: =Colors.Primary
                         Color: =Styles.Button.Primary.Color
@@ -1660,24 +1663,35 @@ Screens:
                           // Update SharePoint data with error handling
                           IfError(
                             // Update user information
-                            Patch(User_1, LookUp(User_1, userID = varSelectedUser.userID), {
-                              fullname: 'Detail.FullName.Input'.Text,
-                              email: 'Detail.Email.Input'.Text,
-                              departmentID: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.Value).departmentID,
-                              jobTitle: 'Detail.JobTitle.Input'.Text,
-                              phone: 'Detail.Phone.Input'.Text
-                            });
+                              Set(
+                                  varDepartmentLookup,
+                                  {
+                                      Id: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.name).ID,
+                                      Value: 'Detail.Department.Dropdown'.Selected.name
+                                  }
+                              );
+                              Patch(
+                                  User_1,
+                                  LookUp(User_1, userID = varSelectedUser.userID),
+                                  {
+                                      fullname: 'Detail.FullName.Input'.Text,
+                                      email: 'Detail.Email.Input'.Text,
+                                      departmentID: varDepartmentLookup,
+                                      jobTitle: 'Detail.JobTitle.Input'.Text,
+                                      phone: 'Detail.Phone.Input'.Text
+                                  }
+                              );
                             // Update user role mapping
                             Patch(User_Role, LookUp(User_Role, userID = varSelectedUser.userID), {
-                              roleID: LookUp(Role_1, name = 'Detail.Role.Dropdown'.Selected.Value).roleID
+                              roleID: LookUp(Role_1, name = 'Detail.Role.Dropdown_1'.Selected.name).roleID
                             });
                             // Refresh collections to reflect changes
                             ClearCollect(colUsers, 
                               AddColumns(
                                 AddColumns(User_1, 
-                                  "Department", LookUp(Department_1, departmentID = ThisRecord.departmentID).name
+                                  Department, LookUp(Department_1, departmentID = ThisRecord.departmentID).name
                                 ),
-                                "Role", LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
+                                Role, LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
                               )
                             );
                             // Update selected user with new data
@@ -1695,7 +1709,7 @@ Screens:
                         X: =Parent.Width * 0.75
                         Y: =Parent.Height * 0.2
       - Loading.Overlay_1:
-          Control: GroupContainer@1.3.0
+          Control: GroupContainer
           Variant: ManualLayout
           Properties:
             Fill: =RGBA(255, 255, 255, 0.8)
@@ -1704,7 +1718,7 @@ Screens:
             Width: =Parent.Width
           Children:
             - Loading.Spinner_1:
-                Control: Classic/Icon@2.5.0
+                Control: Classic/Icon
                 Properties:
                   Color: =Colors.Primary
                   Height: =40
