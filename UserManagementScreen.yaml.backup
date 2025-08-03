@@ -379,7 +379,68 @@ Screens:
                           =Notify("Có lỗi khi lưu dữ liệu", NotificationType.Error)
                         OnReset: |
                           =Set(varFormMode, "Add"); Set(varEditingUser, Blank())
-                        OnSuccess: =Notify("Thành công")
+                        OnSuccess: |-
+                          =// After successful form submission, handle UserRole relationship
+                          If(varFormMode = "Add",
+                            // For new users, create UserRole mapping
+                            If(Not(IsBlank(DataCardValue6.Selected)),
+                              Patch(UserRole, Defaults(UserRole), {
+                                userID: {
+                                  Id: 'User.Add.Edit.Form'.LastSubmit.ID,
+                                  Value: 'User.Add.Edit.Form'.LastSubmit.userID
+                                },
+                                roleID: {
+                                  Id: DataCardValue6.Selected.ID,
+                                  Value: DataCardValue6.Selected.name
+                                }
+                              })
+                            ),
+                            // For edit mode, update existing UserRole
+                            If(Not(IsBlank(DataCardValue6.Selected)),
+                              Patch(
+                                UserRole, 
+                                LookUp(UserRole, userID.Value = varEditingUser.userID), 
+                                {
+                                  roleID: {
+                                    Id: DataCardValue6.Selected.ID,
+                                    Value: DataCardValue6.Selected.name
+                                  }
+                                }
+                              )
+                            )
+                          );
+
+                          // Refresh collections after successful submission
+                          ClearCollect(colUsersRaw, User_1);
+                          ClearCollect(
+                            colUsersWithDept,
+                            AddColumns(
+                              colUsersRaw,
+                              Department,
+                              LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
+                            )
+                          );
+                          ClearCollect(
+                            colUsers,
+                            AddColumns(
+                              colUsersWithDept,
+                              Role,
+                              LookUp(
+                                colRoles,
+                                roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value
+                              ).name
+                            )
+                          );
+
+                          // Close form and show success message
+                          Set(varShowUserForm, false);
+                          Notify(
+                            If(varFormMode = "Add", 
+                              "Đã thêm người dùng thành công!", 
+                              "Đã cập nhật thông tin thành công!"
+                            ), 
+                            NotificationType.Success
+                          )
                         Width: =Parent.Width
                       Children:
                         - fullname_DataCard:
@@ -654,7 +715,7 @@ Screens:
                                     ChevronHoverBackground: =RGBA(245, 245, 245, 1)
                                     ChevronHoverFill: =RGBA(50, 49, 48, 1)
                                     Color: =RGBA(50, 49, 48, 1)
-                                    DefaultSelectedItems: =Parent.Default
+                                    DefaultSelectedItems: =If(varFormMode = "Edit", [Parent.Default], [First(Department_1)])
                                     DisabledBorderColor: =RGBA(0, 0, 0, 0)
                                     DisabledColor: =RGBA(161, 159, 157, 1)
                                     DisabledFill: =RGBA(242, 242, 241, 0)
@@ -997,7 +1058,7 @@ Screens:
                                     ChevronHoverBackground: =RGBA(245, 245, 245, 1)
                                     ChevronHoverFill: =RGBA(50, 49, 48, 1)
                                     Color: =RGBA(50, 49, 48, 1)
-                                    DefaultSelectedItems: =Parent.Default
+                                    DefaultSelectedItems: =If(varFormMode = "Edit", [Parent.Default], [First(Role_1)])
                                     DisabledBorderColor: =RGBA(0, 0, 0, 0)
                                     DisabledColor: =RGBA(161, 159, 157, 1)
                                     DisabledFill: =RGBA(242, 242, 241, 0)
@@ -1103,7 +1164,22 @@ Screens:
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
-                        OnSelect: =SubmitForm('User.Add.Edit.Form')
+                        OnSelect: |-
+                          =// Validate required fields before submission
+                          If(
+                            And(
+                              Not(IsBlank(DataCardValue1.Text)),
+                              Not(IsBlank(DataCardValue2.Text)),
+                              Not(IsBlank(DataCardValue3.Selected)),
+                              Not(IsBlank(DataCardValue4.Text)),
+                              Not(IsBlank(DataCardValue5.Text)),
+                              Not(IsBlank(DataCardValue6.Selected))
+                            ),
+                            // All fields valid, submit form
+                            SubmitForm('User.Add.Edit.Form'),
+                            // Show validation error
+                            Notify("Vui lòng điền đầy đủ thông tin bắt buộc", NotificationType.Warning)
+                          )
                         Size: =FontSizes.Medium
                         Text: =If(varFormMode = "Add", "Thêm người dùng", "Cập nhật")
                         Width: =150

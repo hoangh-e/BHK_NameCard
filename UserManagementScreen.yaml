@@ -409,14 +409,14 @@ Screens:
                               )
                             )
                           );
-                          
+
                           // Refresh collections after successful submission
                           ClearCollect(colUsersRaw, User_1);
                           ClearCollect(
                             colUsersWithDept,
                             AddColumns(
                               colUsersRaw,
-                              "Department",
+                              Department,
                               LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
                             )
                           );
@@ -424,14 +424,14 @@ Screens:
                             colUsers,
                             AddColumns(
                               colUsersWithDept,
-                              "Role",
+                              Role,
                               LookUp(
                                 colRoles,
                                 roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value
                               ).name
                             )
                           );
-                          
+
                           // Close form and show success message
                           Set(varShowUserForm, false);
                           Notify(
