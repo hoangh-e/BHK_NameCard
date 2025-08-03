@@ -2,47 +2,7 @@ Screens:
   UserManagementScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: |
-        =// Load SharePoint data first
-          ClearCollect(colDepartments, Department_1);
-          ClearCollect(colRoles, Role_1);
-          ClearCollect(colUserRoles, User_Role);
-
-          ClearCollect(colUsersRaw, User_1);
-
-          ClearCollect(
-              colUsersWithDept,
-              AddColumns(
-                  colUsersRaw,
-                  Department,
-                  LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
-              )
-          );
-
-          ClearCollect(
-              colUsers,
-              AddColumns(
-                  colUsersWithDept,
-                  Role,
-                  LookUp(
-                      colRoles,
-                      roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID
-                  ).name
-              )
-          );
-            // Reset form states
-            Set(varShowUserForm, false);
-            Set(varFormMode, "Add");
-            Set(varEditingUser, Blank());
-            Set(varSelectedUser, Blank());
-            Set(varDeleteConfirm, false);
-            Set(varLoadingUsers, false);
-            Set(varErrorMessage, "");
-            Set(varShowUserDetail, false);
-            Set(varDetailFormMode, "View");
-            Set(varShowContextMenu, false);
-            Set(varContextMenuX, 0);
-            Set(varContextMenuY, 0)
+      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, User_Role);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
     Children:
       - Main.Content.Container_3:
           Control: GroupContainer
@@ -118,7 +78,7 @@ Screens:
                         - Search.Input_1:
                             Control: Classic/TextInput
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, If(IsBlank(Self.Text), Colors.Border, Colors.Success))
+                              BorderColor: =If(IsBlank(Self.Text), Colors.Border, Colors.Success)
                               BorderThickness: =If(Self.Focused, InteractionStates.Input.Focus.BorderWidth, InteractionStates.Input.Normal.BorderWidth)
                               Color: =Colors.TextPrimary
                               Default: =""
@@ -138,12 +98,8 @@ Screens:
                               Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Concat(
-                                  Table({Name: "Tất cả"}),
-                                  AddColumns(Department_1, "Name", name),
-                                  Value
-                                )
+                              Items: =colDepartmentsWithAll
+                              Items.Value: =Value
                               OnChange: |
                                 =Set(varSelectedDepartment, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.25
@@ -156,12 +112,8 @@ Screens:
                               Default: ="Tất cả"
                               Fill: =Colors.White
                               Height: =Styles.Input.Height
-                              Items: |
-                                =Concat(
-                                  Table({Name: "Tất cả"}),
-                                  AddColumns(Role_1, "Name", name),
-                                  Value
-                                )
+                              Items: =colRolesWithAll
+                              Items.Value: =Value
                               OnChange: |
                                 =Set(varSelectedRole, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
                               Width: =Parent.Width * 0.15
@@ -206,14 +158,11 @@ Screens:
                               OnSelect: |
                                 =If(Not(IsBlank('Users.DataTable'.Selected)),
                                     Set(varSelectedUser, 'Users.DataTable'.Selected);
-                                    Set(varContextMenuX, Min(App.ActiveScreen.Width - 150, 150));
-                                    Set(varContextMenuY, Min(App.ActiveScreen.Height - 120, 150));
-                                 // Set(varContextMenuX, Min(App.ActiveScreen.Width - 150, App.MouseX));
-                                 // Set(varContextMenuY, Min(App.ActiveScreen.Height - 120, App.MouseY));
+                                    Set(varContextMenuX, 200);
+                                    Set(varContextMenuY, 300);
                                     Set(varShowContextMenu, true)
                                 )
                               Width: =1096.04
-                              Y: =0.06399999999996453
                         - User.Context.Menu:
                             Control: GroupContainer
                             Variant: ManualLayout
@@ -284,7 +233,14 @@ Screens:
             Height: =557
             HoverColor: =RGBA(255, 255, 255, 1)
             HoverFill: =RGBA(0, 120, 212, 0.1)
-            Items: =colUsers
+            Items: |-
+              =Filter(colUsers, 
+                  And( 
+                  Or( IsBlank(varSearchText), varSearchText in fullname, varSearchText in email ), 
+                  Or( IsBlank(varSelectedDepartment), varSelectedDepartment = "Tất cả", Department = varSelectedDepartment ), 
+                  Or( IsBlank(varSelectedRole), varSelectedRole = "Tất cả", Role = varSelectedRole ) 
+                  ) 
+                  )
             SelectedColor: =RGBA(50, 49, 48, 1)
             SelectedFill: =RGBA(199, 224, 244, 1)
             Width: =1130
@@ -422,50 +378,7 @@ Screens:
                           =Notify("Có lỗi khi lưu dữ liệu: " & FirstError.Message, NotificationType.Error)
                         OnReset: |
                           =Set(varFormMode, "Add"); Set(varEditingUser, Blank())
-                        OnSuccess: |
-                          =With({
-                            newUserID: Concatenate("USER_", Text(Rand() * 1000000, "000000"))
-                          },
-                            If(varFormMode = "Add",
-                              // Create new user
-                              Patch(User_1, Defaults(User_1), {
-                                userID: newUserID,
-                                fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,
-                                email: 'User.Add.Edit.Form'.email_DataCard.Update,
-                                departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update.departmentID,
-                                jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,
-                                phone: 'User.Add.Edit.Form'.phone_DataCard.Update
-                              });
-                              // Create user role mapping
-                              Patch(User_Role, Defaults(User_Role), {
-                                userID: newUserID,
-                                roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update.roleID
-                              }),
-                              // Update existing user
-                              Patch(User_1, LookUp(User_1, userID = varEditingUser.userID), {
-                                fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,
-                                email: 'User.Add.Edit.Form'.email_DataCard.Update,
-                                departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update.departmentID,
-                                jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,
-                                phone: 'User.Add.Edit.Form'.phone_DataCard.Update
-                              });
-                              // Update user role mapping
-                              Patch(User_Role, LookUp(User_Role, userID = varEditingUser.userID), {
-                                roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update.roleID
-                              })
-                            )
-                          );
-                          // Refresh collections
-                          ClearCollect(colUsers, 
-                            AddColumns(
-                              AddColumns(User_1, 
-                                "Department", LookUp(Department_1, departmentID = ThisRecord.departmentID).name
-                              ),
-                              "Role", LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
-                            )
-                          );
-                          Set(varShowUserForm, false);
-                          Notify(If(varFormMode = "Add", "Đã thêm người dùng thành công!", "Đã cập nhật thông tin người dùng!"), NotificationType.Success)
+                        OnSuccess: "=If(varFormMode = \"Add\",\n  // NEW USER CREATION - Simplified  \n  With({\n    newUserID: Concatenate(\"USER_\", Text(Rand() * 1000000, \"000000\"))\n  },\n    // Create new user record\n    Patch(User_1, Defaults(User_1), {\n      userID: newUserID,\n      fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,\n      email: 'User.Add.Edit.Form'.email_DataCard.Update,\n      departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update,\n      jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,\n      phone: 'User.Add.Edit.Form'.phone_DataCard.Update\n    });\n    \n    // Create user role mapping if role selected\n    If(\n      Not(IsBlank('User.Add.Edit.Form'.roleID_DataCard.Update)),\n      Patch(User_Role, Defaults(User_Role), {\n        userID: newUserID,\n        roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update\n      })\n    )\n  ),\n  \n  // EDIT USER - Simplified\n  Patch(User_1, LookUp(User_1, userID = varEditingUser.userID), {\n    fullname: 'User.Add.Edit.Form'.fullname_DataCard.Update,\n    email: 'User.Add.Edit.Form'.email_DataCard.Update, \n    departmentID: 'User.Add.Edit.Form'.departmentID_DataCard.Update,\n    jobTitle: 'User.Add.Edit.Form'.jobTitle_DataCard.Update,\n    phone: 'User.Add.Edit.Form'.phone_DataCard.Update\n  });\n  \n  // Update user role mapping if changed\n  If(\n    Not(IsBlank('User.Add.Edit.Form'.roleID_DataCard.Update)),\n    Patch(User_Role, LookUp(User_Role, userID = varEditingUser.userID), {\n      roleID: 'User.Add.Edit.Form'.roleID_DataCard.Update\n    })\n  )\n);\n\n// Refresh collections - Error Safe\nIfError(\n  // Reload users with department and role info\n  ClearCollect(colUsersRaw, User_1);\n  ClearCollect(\n    colUsersWithDept,\n    AddColumns(\n      colUsersRaw,\n      Department,\n      LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n    )\n  );\n  ClearCollect(\n    colUsers,\n    AddColumns(\n      colUsersWithDept,\n      Role,\n      LookUp(\n        colRoles,\n        roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID\n      ).name\n    )\n  ),\n  \n  // Fallback - Just reload basic user data\n  ClearCollect(colUsers, User_1);\n  Notify(\"Data refreshed with basic info only\", NotificationType.Warning)\n);\n\n// Close modal and show success message\nSet(varShowUserForm, false);\nNotify(If(varFormMode = \"Add\", \"Đã thêm người dùng thành công!\", \"Đã cập nhật thông tin người dùng!\"), NotificationType.Success)\n"
                         Width: =Parent.Width
                       Children:
                         - fullname_DataCard:
@@ -700,7 +613,7 @@ Screens:
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="departmentID"
-                              Default: =If(varFormMode = "Edit", LookUp(Department_1, name = varEditingUser.Department), LookUp(Department_1, name = "Phòng Công nghệ thông tin"))
+                              Default: =If(varFormMode = "Edit", LookUp(Department_1, name = varEditingUser.Department), First(Department_1) )
                               DisplayName: ="Phòng ban"
                               Required: =true
                               Update: =DataCardValue3.Selected
@@ -1043,7 +956,7 @@ Screens:
                             Properties:
                               BorderColor: =RGBA(245, 245, 245, 1)
                               DataField: ="roleID"
-                              Default: =If(varFormMode = "Edit", LookUp(Role_1, name = varEditingUser.Role), LookUp(Role_1, name = "Employee"))
+                              Default: =If(varFormMode = "Edit", LookUp(Role_1, name = varEditingUser.Role), First(Role_1) )
                               DisplayName: ="Vai trò"
                               Required: =true
                               Update: =DataCardValue6.Selected
@@ -1287,8 +1200,17 @@ Screens:
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Danger.HoverFill
                         OnSelect: |
-                          =RemoveIf(colUsers, Id = varSelectedUser.Id);
+                          =// Delete from SharePoint
+                          Remove(User_1, LookUp(User_1, userID = varSelectedUser.userID));
+
+                          // Remove from User_Role table
+                          RemoveIf(User_Role, userID = varSelectedUser.userID);
+
+                          // Update collection
+                          RemoveIf(colUsers, userID = varSelectedUser.userID);
+
                           Set(varDeleteConfirm, false);
+                          Set(varSelectedUser, Blank());
                           Notify("Đã xóa người dùng thành công!", NotificationType.Success)
                         Size: =FontSizes.Medium
                         Text: ="Xóa"
@@ -1450,9 +1372,9 @@ Screens:
                         - Detail.Email.Input:
                             Control: Classic/TextInput
                             Properties:
-                              BorderColor: =Colors.Primary
+                              BorderColor: =Colors.Border
                               Default: =varSelectedUser.email
-                              FocusedBorderColor: =Color.White
+                              FocusedBorderColor: =Colors.Primary
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1487,11 +1409,13 @@ Screens:
                         - Detail.Department.Dropdown:
                             Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              BorderColor: =Colors.Border
                               Default: =varSelectedUser.Department
+                              FocusedBorderColor: =Colors.Primary
+                              FocusedBorderThickness: =2
                               Height: =Styles.Input.Height
-                              Items: =Department_1
-                              Items.Value: =Title
+                              Items: =Department_1.name
+                              Items.Value: =name
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1525,8 +1449,9 @@ Screens:
                         - Detail.JobTitle.Input:
                             Control: Classic/TextInput
                             Properties:
-                              BorderColor: =If(Self., Colors.Primary, Colors.Border)
+                              BorderColor: =Colors.Border
                               Default: =varSelectedUser.jobTitle
+                              FocusedBorderColor: =Colors.Primary
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1561,8 +1486,9 @@ Screens:
                         - Detail.Phone.Input:
                             Control: Classic/TextInput
                             Properties:
-                              BorderColor: =If(Self.Focused, Colors.Primary, Colors.Border)
+                              BorderColor: =Colors.Border
                               Default: =varSelectedUser.phone
+                              FocusedBorderColor: =Colors.Primary
                               Height: =Styles.Input.Height
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
@@ -1597,12 +1523,13 @@ Screens:
                         - Detail.Role.Dropdown:
                             Control: Classic/DropDown
                             Properties:
-                              BorderColor: =If(Self.Focus, Colors.Primary, Colors.Border)
+                              BorderColor: =Colors.Border
                               Default: =varSelectedUser.Role
+                              FocusedBorderColor: =Colors.Primary
+                              FocusedBorderThickness: =2
                               Height: =Styles.Input.Height
                               Items: =Role_1.name
                               Items.Value: =name
-                              OnSelect: =Self.Bỏ
                               Size: =FontSizes.Base
                               Visible: =varDetailFormMode = "Edit"
                               Width: =Parent.Width * 0.4
@@ -1657,52 +1584,7 @@ Screens:
                         Fill: =Styles.Button.Primary.Fill
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Primary.HoverFill
-                        OnSelect: |
-                          =// Clear previous errors
-                          Set(varErrorMessage, "");
-                          // Update SharePoint data with error handling
-                          IfError(
-                            // Update user information
-                              Set(
-                                  varDepartmentLookup,
-                                  {
-                                      Id: LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.name).ID,
-                                      Value: 'Detail.Department.Dropdown'.Selected.name
-                                  }
-                              );
-                              Patch(
-                                  User_1,
-                                  LookUp(User_1, userID = varSelectedUser.userID),
-                                  {
-                                      fullname: 'Detail.FullName.Input'.Text,
-                                      email: 'Detail.Email.Input'.Text,
-                                      departmentID: varDepartmentLookup,
-                                      jobTitle: 'Detail.JobTitle.Input'.Text,
-                                      phone: 'Detail.Phone.Input'.Text
-                                  }
-                              );
-                            // Update user role mapping
-                            Patch(User_Role, LookUp(User_Role, userID = varSelectedUser.userID), {
-                              roleID: LookUp(Role_1, name = 'Detail.Role.Dropdown_1'.Selected.name).roleID
-                            });
-                            // Refresh collections to reflect changes
-                            ClearCollect(colUsers, 
-                              AddColumns(
-                                AddColumns(User_1, 
-                                  Department, LookUp(Department_1, departmentID = ThisRecord.departmentID).name
-                                ),
-                                Role, LookUp(Role_1, roleID = LookUp(User_Role, userID = ThisRecord.userID).roleID).name
-                              )
-                            );
-                            // Update selected user with new data
-                            Set(varSelectedUser, LookUp(colUsers, userID = varSelectedUser.userID));
-                            // Switch back to view mode
-                            Set(varDetailFormMode, "View");
-                            // Show success notification
-                            Notify("Đã cập nhật thông tin người dùng thành công!", NotificationType.Success),
-                            // Error handling
-                            Set(varErrorMessage, "Có lỗi khi cập nhật thông tin: " & FirstError.Message)
-                          )
+                        OnSelect: "=// Clear previous errors\nSet(varErrorMessage, \"\");\n\n// Create lookup objects for SharePoint\nSet(\n  varDepartmentLookup,\n  LookUp(Department_1, name = 'Detail.Department.Dropdown'.Selected.name)\n);\nSet(\n  varRoleLookup, \n  LookUp(Role_1, name = 'Detail.Role.Dropdown'.Selected.name)\n);\n\n// Update SharePoint data with error handling\nIfError(\n  // Update user information\n  Patch(\n    User_1,\n    LookUp(User_1, userID = varSelectedUser.userID),\n    {\n      fullname: 'Detail.FullName.Input'.Text,\n      email: 'Detail.Email.Input'.Text,\n      departmentID: {\n        Id:varDepartmentLookup.ID,\n        Value:varDepartmentLookup.name\n      },\n      jobTitle: 'Detail.JobTitle.Input'.Text,\n      phone: 'Detail.Phone.Input'.Text\n    }\n  );\n  \n  // Update user role mapping if role changed\n  If(\n    Not(IsBlank(varRoleLookup)),\n    Patch(User_Role, LookUp(User_Role, userID = varSelectedUser.userID), {\n      roleID: varRoleLookup.roleID\n    })\n  );\n  \n  // Refresh collections - Error Safe\n  IfError(\n    ClearCollect(colUsersRaw, User_1);\n    ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n        colUsersRaw,\n        Department,\n        LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n    );\n    ClearCollect(\n      colUsers,\n      AddColumns(\n        colUsersWithDept,\n        Role,\n        LookUp(\n          colRoles,\n          roleID = LookUp(colUserRoles, userID = ThisRecord.userID).roleID\n        ).name\n      )\n    ),\n    \n    // Fallback\n    ClearCollect(colUsers, User_1)\n  );\n  \n  // Update selected user with new data\n  Set(varSelectedUser, LookUp(colUsers, userID = varSelectedUser.userID));\n  Set(varDetailFormMode, \"View\");\n  Notify(\"Đã cập nhật thông tin người dùng thành công!\", NotificationType.Success),\n  \n  // Error handling\n  Set(varErrorMessage, \"Có lỗi khi cập nhật thông tin: \" & FirstError.Message)\n)\n"
                         Size: =FontSizes.Medium
                         Text: ="Lưu"
                         Width: =Parent.Width * 0.2
