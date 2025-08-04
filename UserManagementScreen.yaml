@@ -2,7 +2,7 @@ Screens:
   UserManagementScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    // Get current user info for delete protection\n    Set(varCurrentUser, User().Email);\n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
+      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
     Children:
       - Main.Content.Container_3:
           Control: GroupContainer
@@ -156,7 +156,7 @@ Screens:
                                   )
                                 )
                               Size: =FontSizes.Base
-                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn để xóa\", If('Users.DataTable'.Selected.userID = User().Email, \"🚫 Không thể xóa\", \"🗑️ Xóa người dùng\"))"
+                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn để xóa\", If('Users.DataTable'.Selected.userID = User().Email, \"\U0001F6AB Không thể xóa\", \"\U0001F5D1️ Xóa người dùng\"))"
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.84
                               Y: =Parent.Height * 0.2
@@ -257,7 +257,7 @@ Screens:
             HeadingColor: =RGBA(255, 255, 255, 1)
             HeadingFill: =RGBA(0, 120, 212, 1)
             HeadingFont: =Font.'Segoe UI'
-            Height: =Parent.Height * 0.85 - 20
+            Height: =517
             HoverColor: =RGBA(255, 255, 255, 1)
             HoverFill: =RGBA(0, 120, 212, 0.1)
             Items: |-
@@ -271,9 +271,9 @@ Screens:
             NoDataText: ="Không tìm thấy dữ liệu để hiển thị"
             SelectedColor: =RGBA(50, 49, 48, 1)
             SelectedFill: =RGBA(199, 224, 244, 1)
-            Width: =Parent.Width * 0.94
-            X: =Parent.Width * 0.03
-            Y: =Parent.Height * 0.12 + 10
+            Width: =1066
+            X: =260
+            Y: =215
           Children:
             - FullName.Column:
                 Control: DataTableColumn
@@ -1317,7 +1317,7 @@ Screens:
                               colUsersWithDept,
                               AddColumns(
                                 colUsersRaw,
-                                "Department",
+                                Department,
                                 LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
                               )
                             );
@@ -1325,7 +1325,7 @@ Screens:
                               colUsers,
                               AddColumns(
                                 colUsersWithDept,
-                                "Role",
+                                Role,
                                 LookUp(
                                   colRoles,
                                   roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value
