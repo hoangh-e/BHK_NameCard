@@ -1,10 +1,108 @@
 Screens:
-  ReportScreen_1:
+  ReportScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: "=// Load SharePoint data với mapping chính xác\nIfError(\n  // Load main NamecardRequest data\n  ClearCollect(colReportDataRaw, NamecardRequest_1);\n  \n  // Tạo collection với mapping đúng fields SharePoint\n  ClearCollect(colReportData,\n    AddColumns(\n      AddColumns(\n        AddColumns(\n          AddColumns(\n            colReportDataRaw,\n            EmployeeName, \n            With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n              If(IsBlank(lookupUser), \"[Không tìm thấy]\", lookupUser.fullname)\n            )\n          ),\n          Department, \n          With({lookupUser: LookUp(User_1, userID = ThisRecord.userID)},\n            If(\n              IsBlank(lookupUser), \n              \"[Không tìm thấy]\",\n              With({lookupDept: LookUp(Department_1, departmentID = lookupUser.departmentID.Id)},\n                If(IsBlank(lookupDept), \"[Không có phòng ban]\", lookupDept.name)\n              )\n            )\n          )\n        ),\n        RequestCode, \"YC-\" & Text(ThisRecord.requestID, \"000000\")\n      ),\n      StatusText,\n      With({statusValue: ThisRecord.status.Value},\n        Switch(statusValue,\n          \"Chờ quản lý duyệt\", \"PendingManagerApproval\",\n          \"Chờ HR duyệt\", \"PendingHRApproval\", \n          \"Đã duyệt\", \"Approved\",\n          \"Từ chối\", \"Rejected\",\n          \"Đã in\", \"Printed\",\n          \"Đã phát\", \"Distributed\",\n          statusValue\n        )\n      )\n    )\n  ),\n  // Fallback nếu SharePoint fails  \n  ClearCollect(colReportData, Table())\n);\n\nSet(varCurrentUser, {FullName: \"Trần Thị Bình\", Role: \"Manager\", Department: \"Phòng Công nghệ thông tin\"});\nSet(varReportViewType, \"Table\");\nSet(varFilterMonth, Text(Today(), \"mm\"));\nSet(varFilterYear, Text(Today(), \"yyyy\"));\nSet(varFilterDepartment, \"All\");\nSet(varFilterStatus, \"All\");\nSet(varFilterPriority, \"All\");\nSet(varDateFrom, DateAdd(Today(), -30, TimeUnit.Days));\nSet(varDateTo, Today());\n\n// Update statistics với SharePoint data\nUpdateContext({\n  reportStats: {\n    TotalRequests: CountRows(colReportData),\n    ApprovedRequests: CountRows(Filter(colReportData, StatusText = \"Approved\")),\n    PendingRequests: CountRows(Filter(colReportData, StatusText in [\"PendingManagerApproval\", \"PendingHRApproval\"])),\n    RejectedRequests: CountRows(Filter(colReportData, StatusText = \"Rejected\")),\n    TotalCost: Sum(colReportData, 50000), // Cost calculation based on quantity\n    AverageProcessingDays: 3 // Simplified calculation\n  }\n});\nSet(varFilteredData, colReportData)\n"
+      OnVisible: |-
+        =// Load SharePoint data với mapping chính xác và error handling
+        IfError(
+          // STEP 1: Load base SharePoint tables
+          ClearCollect(colDepartmentsBase, Department_1);
+          ClearCollect(colUsersBase, User_1);
+          ClearCollect(colReportDataRaw, NamecardRequest_1);
+
+          // STEP 2: Map EmployeeName
+          ClearCollect(
+            colReportStep1,
+            AddColumns(
+              colReportDataRaw,
+              EmployeeName, 
+              With({lookupUser: LookUp(colUsersBase, userID = ThisRecord.userID)},
+                If(IsBlank(lookupUser), "[Không tìm thấy]", lookupUser.fullname)
+              )
+            )
+          );
+
+          // STEP 3: Map Department
+          ClearCollect(
+            colReportStep2,
+            AddColumns(
+              colReportStep1,
+              Department, 
+              With({
+                lookupUser: LookUp(colUsersBase, userID = ThisRecord.userID)
+              },
+                If(
+                  IsBlank(lookupUser), 
+                  "[Không tìm thấy]",
+                  With({
+                    lookupDept: LookUp(colDepartmentsBase, ID = lookupUser.departmentID.Id)
+                  },
+                    If(IsBlank(lookupDept), "[Không có phòng ban]", lookupDept.name)
+                  )
+                )
+              )
+            )
+          );
+
+          // STEP 4: Add RequestCode
+          ClearCollect(
+            colReportStep3,
+            AddColumns(
+              colReportStep2,
+              RequestCode, Text(ThisRecord.ID, "000000")
+            )
+          );
+
+          // STEP 5: Add StatusText
+          ClearCollect(
+            colReportData,
+            AddColumns(
+              colReportStep3,
+              StatusText,
+              With({statusValue: ThisRecord.status.Value},
+                Switch(statusValue,
+                  "Chờ quản lý duyệt", "PendingManagerApproval",
+                  "Chờ HR duyệt", "PendingHRApproval", 
+                  "Đã duyệt", "Approved",
+                  "Từ chối", "Rejected",
+                  "Đã in", "Printed",
+                  "Đã phát", "Distributed",
+                  statusValue
+                )
+              )
+            )
+          ),
+
+          // ERROR HANDLING
+          ClearCollect(colReportData, Table());
+          Notify("Không thể tải dữ liệu SharePoint. Vui lòng kiểm tra kết nối.", NotificationType.Error)
+        );
+
+        // Set initial variables
+        Set(varCurrentUser, {FullName: "Trần Thị Bình", Role: "Manager", Department: "Phòng Công nghệ thông tin"});
+        Set(varReportViewType, "Table");
+        Set(varFilterMonth, Text(Today(), "mm"));
+        Set(varFilterYear, Text(Today(), "yyyy"));
+        Set(varFilterDepartment, "All");
+        Set(varFilterStatus, "All");
+        Set(varFilterPriority, "All");
+        Set(varDateFrom, DateAdd(Today(), -30, TimeUnit.Days));
+        Set(varDateTo, Today());
+
+        // Update statistics
+        UpdateContext({
+          reportStats: {
+            TotalRequests: CountRows(colReportData),
+            ApprovedRequests: CountRows(Filter(colReportData, StatusText = "Approved")),
+            PendingRequests: CountRows(Filter(colReportData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+            RejectedRequests: CountRows(Filter(colReportData, StatusText = "Rejected")),
+            TotalCost: Sum(colReportData, 50000),
+            AverageProcessingDays: 3
+          }
+        });
+        Set(varFilteredData, colReportData);
     Children:
-      - Main.Content.Container_5:
+      - Main.Content.Container_6:
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
@@ -14,7 +112,7 @@ Screens:
             X: =Styles.Navigation.Width
             Y: =Styles.Header.Height
           Children:
-            - Report.Content.Section_1:
+            - Report.Content.Section_2:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -23,7 +121,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =323.09999999999997
                 Children:
-                  - Table.View.Container_1:
+                  - Table.View.Container_2:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -33,7 +131,7 @@ Screens:
                         Width: =Parent.Width * 0.96
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.02
-                  - Column.Chart.Container_1:
+                  - Column.Chart.Container_2:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -44,29 +142,80 @@ Screens:
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.02
                       Children:
-                        - Chart.Title_1:
+                        - Chart.Title_2:
                             Control: Label@2.5.1
+                            Group: CompositeColumnChart1_1
                             Properties:
                               Align: =Align.Center
+                              BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =Colors.TextPrimary
+                              Font: =Font.'Segoe UI'
                               FontWeight: =FontWeight.Bold
                               Height: =Parent.Height * 0.08
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ thống kê yêu cầu thẻ tên theo trạng thái"
                               Width: =Parent.Width
-                              Y: =Parent.Height * 0.02
-                        - Chart.Info_1:
-                            Control: Label@2.5.1
+                              Y: =10.285439999999994
+                        - Status.Chart_2:
+                            Control: BarChart@2.3.0
+                            Group: CompositeColumnChart1_1
                             Properties:
-                              Align: =Align.Center
-                              Color: =Colors.TextMuted
-                              Height: =Parent.Height * 0.7
-                              Size: =FontSizes.Base
-                              Text: ="Biểu đồ cột hiển thị phân bố yêu cầu theo trạng thái phê duyệt. Dữ liệu được lọc theo các tiêu chí đã chọn ở trên."
-                              Width: =Parent.Width * 0.8
-                              X: =Parent.Width * 0.1
-                              Y: =Parent.Height * 0.15
-                  - Pie.Chart.Container_1:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.None
+                              BorderThickness: =2
+                              Color: =RGBA(50, 49, 48, 1)
+                              Font: =Font.'Segoe UI'
+                              Height: =Parent.Height * 0.75
+                              ItemColorSet: =[RGBA(17, 141, 255, 1),RGBA(18,35,158, 1), RGBA(230,108,55,1), RGBA(107,0,123,1), RGBA(224,68,167,1), RGBA(116,78,194,1), RGBA(217,179,0,1), RGBA(214,69,80,1), RGBA(25, 114, 120, 1), RGBA(26, 171, 64, 1), RGBA(21, 198, 244, 1)]
+                              Items: |
+                                =AddColumns(
+                                  GroupBy(
+                                    varFilteredData,
+                                    StatusText, 
+                                    StatusGroup
+                                  ),
+                                  StatusLabel, 
+                                  Switch(StatusText,
+                                    "Approved", "Đã duyệt",
+                                    "PendingManagerApproval", "Chờ Manager", 
+                                    "PendingHRApproval", "Chờ HR",
+                                    "Rejected", "Từ chối",
+                                    "Printed", "Đã in",
+                                    "Distributed", "Đã phát",
+                                    StatusText
+                                  ),
+                                  Count, CountRows(StatusGroup)
+                                )
+                              Items.Labels: =StatusText
+                              Items.Series1: =Count
+                              Items.Series2: =Count
+                              Items.Series3: =Count
+                              Items.Series4: =Count
+                              Items.Series5: =Count
+                              Items.Series6: =Count
+                              Items.Series7: =Count
+                              Items.Series8: =Count
+                              Items.Series9: =Count
+                              Size: =15
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =10.285439999999994
+                        - Chart.Legend_2:
+                            Control: Legend@2.1.0
+                            Group: CompositeColumnChart1_1
+                            Properties:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.None
+                              Color: =RGBA(50, 49, 48, 1)
+                              Font: =Font.'Segoe UI'
+                              Height: =Parent.Height * 0.15
+                              ItemColorSet: ='Status.Chart_2'.ItemColorSet
+                              Items: ='Status.Chart_2'.SeriesLabels
+                              Items.Value: =Value
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =10.285439999999994
+                  - Pie.Chart.Container_2:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -77,29 +226,74 @@ Screens:
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.02
                       Children:
-                        - Pie.Chart.Title_1:
+                        - Pie.Chart.Title_2:
                             Control: Label@2.5.1
+                            Group: CompositePieChart1_1
                             Properties:
                               Align: =Align.Center
+                              BorderColor: =RGBA(0, 0, 0, 1)
                               Color: =Colors.TextPrimary
+                              DisabledColor: =RGBA(161, 159, 157, 1)
+                              Font: =Font.'Segoe UI'
                               FontWeight: =FontWeight.Bold
                               Height: =Parent.Height * 0.08
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ tròn phân bố yêu cầu theo phòng ban"
                               Width: =Parent.Width
-                              Y: =Parent.Height * 0.02
-                        - Pie.Chart.Info_1:
-                            Control: Label@2.5.1
+                              Y: =10.285439999999994
+                        - Department.Pie.Chart_2:
+                            Control: PieChart@2.2.0
+                            Group: CompositePieChart1_1
                             Properties:
-                              Align: =Align.Center
-                              Color: =Colors.TextMuted
-                              Height: =Parent.Height * 0.7
-                              Size: =FontSizes.Base
-                              Text: ="Biểu đồ tròn hiển thị tỷ lệ phân bố yêu cầu thẻ tên theo từng phòng ban. Dữ liệu được tính dựa trên bộ lọc hiện tại."
-                              Width: =Parent.Width * 0.8
-                              X: =Parent.Width * 0.1
-                              Y: =Parent.Height * 0.15
-            - Page.Header.Section_5:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.None
+                              BorderThickness: =2
+                              Color: =RGBA(50, 49, 48, 1)
+                              DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                              Font: =Font.'Segoe UI'
+                              Height: =Parent.Height * 0.65
+                              HoverBorderColor: =RGBA(0, 0, 0, 0)
+                              ItemColorSet: =[RGBA(17, 141, 255, 1),RGBA(18,35,158, 1), RGBA(230,108,55,1), RGBA(107,0,123,1), RGBA(224,68,167,1), RGBA(116,78,194,1), RGBA(217,179,0,1), RGBA(214,69,80,1), RGBA(25, 114, 120, 1), RGBA(26, 171, 64, 1), RGBA(21, 198, 244, 1)]
+                              Items: |
+                                =AddColumns(
+                                  GroupBy(
+                                    Filter(varFilteredData, Not(IsBlank(Department)) && Department <> "[Không tìm thấy]"),
+                                    Department, 
+                                    DeptGroup
+                                  ),
+                                  DeptLabel, Department,
+                                  Count, CountRows(DeptGroup)
+                                )
+                              Items.Labels: =Department
+                              Items.Series: =Count
+                              PressedBorderColor: =RGBA(0, 0, 0, 0)
+                              Size: =15
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =10.285439999999994
+                        - Pie.Chart.Legend_2:
+                            Control: Legend@2.1.0
+                            Group: CompositePieChart1_1
+                            Properties:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.None
+                              BorderThickness: =2
+                              Color: =RGBA(50, 49, 48, 1)
+                              DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                              DisabledColor: =RGBA(161, 159, 157, 1)
+                              DisabledFill: =RGBA(225, 223, 221, 1)
+                              Font: =Font.'Segoe UI'
+                              Height: =Parent.Height * 0.25
+                              HoverBorderColor: =RGBA(0, 0, 0, 0)
+                              ItemColorSet: ='Department.Pie.Chart_2'.ItemColorSet
+                              Items: ='Department.Pie.Chart_2'.SeriesLabels
+                              Items.Value: =Value
+                              PressedBorderColor: =RGBA(0, 0, 0, 0)
+                              Size: =16
+                              Width: =Parent.Width * 0.9
+                              X: =Parent.Width * 0.05
+                              Y: =10.285439999999994
+            - Page.Header.Section_6:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -107,7 +301,7 @@ Screens:
                   Height: =Parent.Height * 0.12
                   Width: =Parent.Width
                 Children:
-                  - Page.Title_5:
+                  - Page.Title_6:
                       Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
@@ -118,7 +312,7 @@ Screens:
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.15
-                  - Page.Subtitle_4:
+                  - Page.Subtitle_5:
                       Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextMuted
@@ -128,7 +322,7 @@ Screens:
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.5
-                  - Export.Current.Button_1:
+                  - Export.Current.Button_2:
                       Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =If(varExportingPDF, Colors.Success, Colors.Success)
@@ -151,7 +345,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width - Parent.Width * 0.35
                         Y: =Parent.Height * 0.15
-                  - Export.All.Button_1:
+                  - Export.All.Button_2:
                       Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =If(varExportingCSV, Colors.Primary, Colors.Border)
@@ -174,7 +368,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width - Parent.Width * 0.18
                         Y: =Parent.Height * 0.15
-            - Report.Stats.Section_1:
+            - Report.Stats.Section_2:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -183,7 +377,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.12
                 Children:
-                  - Total.Requests.Card_4:
+                  - Total.Requests.Card_5:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -198,7 +392,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.1
-                  - Approved.Requests.Card_4:
+                  - Approved.Requests.Card_5:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -213,7 +407,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.18
                         Y: =Parent.Height * 0.1
-                  - Pending.Requests.Card_2:
+                  - Pending.Requests.Card_3:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -228,7 +422,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.34
                         Y: =Parent.Height * 0.1
-                  - Rejected.Requests.Card_4:
+                  - Rejected.Requests.Card_5:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -243,7 +437,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.5
                         Y: =Parent.Height * 0.1
-                  - Total.Cost.Card_1:
+                  - Total.Cost.Card_2:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -258,7 +452,7 @@ Screens:
                         Width: =Parent.Width * 0.16
                         X: =Parent.Width * 0.66
                         Y: =Parent.Height * 0.1
-                  - Avg.Processing.Card_1:
+                  - Avg.Processing.Card_2:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -273,7 +467,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.83
                         Y: =Parent.Height * 0.1
-            - Filters.ViewOptions.Section_1:
+            - Filters.ViewOptions.Section_2:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -282,7 +476,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.3
                 Children:
-                  - Filters.Row1.Container_1:
+                  - Filters.Row1.Container_2:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -290,7 +484,7 @@ Screens:
                         Height: =Parent.Height * 0.6
                         Width: =Parent.Width
                       Children:
-                        - Filters.Title_3:
+                        - Filters.Title_4:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -301,7 +495,7 @@ Screens:
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.1
-                        - Month.Filter_1:
+                        - Month.Filter_2:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -337,11 +531,22 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.5
-                        - Year.Filter_1:
+                        - Year.Filter_2:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -374,11 +579,22 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.12
                               Y: =Parent.Height * 0.5
-                        - Department.Filter_2:
+                        - Department.Filter_3:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -412,11 +628,22 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.21
                               Y: =Parent.Height * 0.5
-                        - Status.Filter_4:
+                        - Status.Filter_5:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -452,11 +679,22 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Width: =Parent.Width * 0.12
                               X: =Parent.Width * 0.37
                               Y: =Parent.Height * 0.5
-                        - Priority.Filter_3:
+                        - Priority.Filter_4:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -489,11 +727,22 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.5
-                  - Filters.Row2.Container_1:
+                  - Filters.Row2.Container_2:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -502,7 +751,7 @@ Screens:
                         Width: =Parent.Width
                         Y: =Parent.Height * 0.6
                       Children:
-                        - Date.From.Label_3:
+                        - Date.From.Label_4:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -512,7 +761,7 @@ Screens:
                               Width: =Parent.Width * 0.06
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.1
-                        - Date.From.Input_3:
+                        - Date.From.Input_4:
                             Control: Classic/DatePicker@2.6.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -537,12 +786,23 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Size: =FontSizes.Small
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.09
                               Y: =Parent.Height * 0.2
-                        - Date.To.Label_3:
+                        - Date.To.Label_4:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -552,7 +812,7 @@ Screens:
                               Width: =Parent.Width * 0.06
                               X: =Parent.Width * 0.2
                               Y: =Parent.Height * 0.1
-                        - Date.To.Input_3:
+                        - Date.To.Input_4:
                             Control: Classic/DatePicker@2.6.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -577,12 +837,23 @@ Screens:
                                     DateValue(Created) >= varDateFrom,
                                     DateValue(Created) <= varDateTo
                                   )
-                                ))
+                                ));
+                                // Update statistics theo filtered data
+                                UpdateContext({
+                                  reportStats: {
+                                    TotalRequests: CountRows(varFilteredData),
+                                    ApprovedRequests: CountRows(Filter(varFilteredData, StatusText = "Approved")),
+                                    PendingRequests: CountRows(Filter(varFilteredData, StatusText in ["PendingManagerApproval", "PendingHRApproval"])),
+                                    RejectedRequests: CountRows(Filter(varFilteredData, StatusText = "Rejected")),
+                                    TotalCost: Sum(varFilteredData, 50000),
+                                    AverageProcessingDays: 3
+                                  }
+                                })
                               Size: =FontSizes.Small
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.26
                               Y: =Parent.Height * 0.2
-                        - Clear.Filters.Button_2:
+                        - Clear.Filters.Button_4:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -591,17 +862,17 @@ Screens:
                               Height: =Parent.Height * 0.6
                               HoverFill: =Styles.Button.Secondary.HoverFill
                               OnSelect: |
-                                =Reset('Month.Filter_1');
-                                Reset('Year.Filter_1');
-                                Reset('Department.Filter_2');
-                                Reset('Status.Filter_4');
-                                Reset('Priority.Filter_3');
+                                =Reset('Month.Filter_2');
+                                Reset('Year.Filter_2');
+                                Reset('Department.Filter_3');
+                                Reset('Status.Filter_5');
+                                Reset('Priority.Filter_4');
                                 Set(varFilterMonth, "All");
                                 Set(varFilterYear, "All");
                                 Set(varFilterDepartment, "All");
                                 Set(varFilterStatus, "All");
                                 Set(varFilterPriority, "All");
-                                Set(varDateFrom, DateAdd(Today(), -30, Days));
+                                Set(varDateFrom, DateAdd(Today(), -30, TimeUnit.Days));
                                 Set(varDateTo, Today());
                                 Set(varFilteredData, colReportData);
 
@@ -621,7 +892,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.38
                               Y: =Parent.Height * 0.2
-                        - View.Type.Label_1:
+                        - View.Type.Label_2:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -632,7 +903,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.55
                               Y: =Parent.Height * 0.1
-                        - Table.View.Button_1:
+                        - Table.View.Button_2:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "Table", Colors.Primary, Colors.Border)
@@ -647,7 +918,7 @@ Screens:
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.65
                               Y: =Parent.Height * 0.2
-                        - Chart.View.Button_1:
+                        - Chart.View.Button_2:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "ColumnChart", Colors.Primary, Colors.Border)
@@ -662,7 +933,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.74
                               Y: =Parent.Height * 0.2
-                        - Pie.Chart.View.Button_1:
+                        - Pie.Chart.View.Button_2:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "PieChart", Colors.Primary, Colors.Border)
@@ -687,11 +958,11 @@ Screens:
             HeadingColor: =Colors.White
             HeadingFill: =Colors.Primary
             HeadingFont: =Font.'Segoe UI'
-            Height: =313
+            Height: =117
             Items: =varFilteredData
-            Width: =1166
-            X: =200
-            Y: =450
+            Width: =938
+            X: =428
+            Y: =644
           Children:
             - RequestCode.Column_1:
                 Control: DataTableColumn@1.0.1
@@ -754,7 +1025,7 @@ Screens:
                   Order: =7
                   Text: =Text(ThisItem.quantity)
                   Width: =80
-      - Loading.Overlay_2:
+      - Loading.Overlay_3:
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
@@ -763,7 +1034,7 @@ Screens:
             Visible: =Or(varExportingPDF, varExportingCSV)
             Width: =Parent.Width
           Children:
-            - Loading.Container_1:
+            - Loading.Container_2:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -775,7 +1046,7 @@ Screens:
                   X: =(Parent.Width - Parent.Width * 0.3) / 2
                   Y: =(Parent.Height - Parent.Height * 0.2) / 2
                 Children:
-                  - Loading.Spinner_2:
+                  - Loading.Spinner_3:
                       Control: Classic/Icon@2.5.0
                       Properties:
                         Color: =Colors.Primary
@@ -784,7 +1055,7 @@ Screens:
                         Width: =40
                         X: =(Parent.Width - 40) / 2
                         Y: =Parent.Height * 0.2
-                  - Loading.Text_1:
+                  - Loading.Text_2:
                       Control: Label@2.5.1
                       Properties:
                         Align: =Align.Center
