@@ -2,7 +2,7 @@ Screens:
   UserManagementScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
+      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    // Get current user info for delete protection\n    Set(varCurrentUser, User().Email);\n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
     Children:
       - Main.Content.Container_3:
           Control: GroupContainer
@@ -135,8 +135,30 @@ Screens:
                                 )
                               Size: =FontSizes.Base
                               Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn người dùng\", \"\U0001F441 Xem chi tiết\")"
+                              Width: =Parent.Width * 0.12
+                              X: =Parent.Width * 0.70
+                              Y: =Parent.Height * 0.2
+                        - Delete.Selected.Button:
+                            Control: Classic/Button
+                            Properties:
+                              BorderColor: =Colors.Error
+                              Color: =Colors.Error
+                              DisplayMode: =If(Or(IsBlank('Users.DataTable'.Selected), 'Users.DataTable'.Selected.userID = User().Email), DisplayMode.Disabled, DisplayMode.Edit)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Height: =Styles.Input.Height
+                              OnSelect: |
+                                =If(Not(IsBlank('Users.DataTable'.Selected)),
+                                  If(
+                                    'Users.DataTable'.Selected.userID = User().Email,
+                                    Notify("Bạn không thể xóa tài khoản của chính mình", NotificationType.Warning),
+                                    Set(varSelectedUser, 'Users.DataTable'.Selected);
+                                    Set(varDeleteConfirm, true)
+                                  )
+                                )
+                              Size: =FontSizes.Base
+                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn để xóa\", If('Users.DataTable'.Selected.userID = User().Email, \"🚫 Không thể xóa\", \"🗑️ Xóa người dùng\"))"
                               Width: =Parent.Width * 0.15
-                              X: =931.634
+                              X: =Parent.Width * 0.84
                               Y: =Parent.Height * 0.2
                   - Users.Data.Table:
                       Control: GroupContainer
@@ -154,7 +176,7 @@ Screens:
                             Control: Rectangle
                             Properties:
                               Fill: =RGBA(0, 0, 0, 0)
-                              Height: =537.064
+                              Height: =Parent.Height - 40
                               OnSelect: |
                                 =If(Not(IsBlank('Users.DataTable'.Selected)),
                                     Set(varSelectedUser, 'Users.DataTable'.Selected);
@@ -162,7 +184,7 @@ Screens:
                                     Set(varContextMenuY, 300);
                                     Set(varShowContextMenu, true)
                                 )
-                              Width: =1096.04
+                              Width: =Parent.Width - 40
                         - User.Context.Menu:
                             Control: GroupContainer
                             Variant: ManualLayout
@@ -173,8 +195,8 @@ Screens:
                               Height: =120
                               Visible: =varShowContextMenu
                               Width: =150
-                              X: =varContextMenuX
-                              Y: =varContextMenuY
+                              X: =Min(varContextMenuX, Parent.Width - 150)
+                              Y: =Min(varContextMenuY, Parent.Height - 120)
                             Children:
                               - View.Context.Button:
                                   Control: Classic/Button
@@ -214,10 +236,15 @@ Screens:
                                     Fill: =RGBA(0, 0, 0, 0)
                                     HoverFill: =Colors.BackgroundLight
                                     OnSelect: |
-                                      =Set(varDeleteConfirm, true);
-                                      Set(varShowContextMenu, false)
+                                      =If(
+                                        varSelectedUser.userID = User().Email,
+                                        Notify("Bạn không thể xóa tài khoản của chính mình", NotificationType.Warning),
+                                        Set(varDeleteConfirm, true);
+                                        Set(varShowContextMenu, false)
+                                      )
                                     Size: =FontSizes.Base
                                     Text: "=\"\U0001F5D1 Xóa\""
+                                    Visible: =varSelectedUser.userID <> User().Email
                                     Width: =Parent.Width
                                     Y: =80
       - Users.DataTable:
@@ -230,7 +257,7 @@ Screens:
             HeadingColor: =RGBA(255, 255, 255, 1)
             HeadingFill: =RGBA(0, 120, 212, 1)
             HeadingFont: =Font.'Segoe UI'
-            Height: =557
+            Height: =Parent.Height * 0.85 - 20
             HoverColor: =RGBA(255, 255, 255, 1)
             HoverFill: =RGBA(0, 120, 212, 0.1)
             Items: |-
@@ -244,9 +271,9 @@ Screens:
             NoDataText: ="Không tìm thấy dữ liệu để hiển thị"
             SelectedColor: =RGBA(50, 49, 48, 1)
             SelectedFill: =RGBA(199, 224, 244, 1)
-            Width: =1130
-            X: =235
-            Y: =210
+            Width: =Parent.Width * 0.94
+            X: =Parent.Width * 0.03
+            Y: =Parent.Height * 0.12 + 10
           Children:
             - FullName.Column:
                 Control: DataTableColumn
@@ -318,11 +345,11 @@ Screens:
             BorderColor: =If(varLoadingUsers, Colors.Primary, Colors.Border)
             BorderThickness: =If(varLoadingUsers, 3, 2)
             Fill: =Colors.White
-            Height: =Parent.Height * 0.7
+            Height: =Min(Parent.Height * 0.7, 600)
             Visible: =varShowUserForm
-            Width: =Parent.Width * 0.5
-            X: =If(varShowUserForm, (Parent.Width - Parent.Width * 0.5) / 2, -Parent.Width * 2)
-            Y: =If(varShowUserForm, (Parent.Height - Parent.Height * 0.7) / 2, -Parent.Height * 2)
+            Width: =Min(Parent.Width * 0.5, 800)
+            X: =If(varShowUserForm, (Parent.Width - Min(Parent.Width * 0.5, 800)) / 2, -Parent.Width * 2)
+            Y: =If(varShowUserForm, (Parent.Height - Min(Parent.Height * 0.7, 600)) / 2, -Parent.Height * 2)
           Children:
             - Modal.Header_1:
                 Control: GroupContainer
@@ -1275,18 +1302,41 @@ Screens:
                         Height: =Styles.Button.Height
                         HoverFill: =Styles.Button.Danger.HoverFill
                         OnSelect: |
-                          =// Delete from SharePoint
-                          Remove(User_1, LookUp(User_1, userID.Value = varSelectedUser.userID));
+                          =If(
+                            varSelectedUser.userID = User().Email,
+                            Notify("Không thể xóa tài khoản của chính bạn", NotificationType.Error),
+                            // Delete from SharePoint User_1
+                            Remove(User_1, LookUp(User_1, userID = varSelectedUser.userID));
 
-                          // Remove from UserRole table
-                          RemoveIf(UserRole, userID.Value = varSelectedUser.userID);
+                            // Remove from UserRole table
+                            RemoveIf(UserRole, userID.Value = varSelectedUser.userID);
 
-                          // Update collection
-                          RemoveIf(colUsers, userID = varSelectedUser.userID);
+                            // Update collections
+                            ClearCollect(colUsersRaw, User_1);
+                            ClearCollect(
+                              colUsersWithDept,
+                              AddColumns(
+                                colUsersRaw,
+                                "Department",
+                                LookUp(colDepartments, departmentID = ThisRecord.departmentID).name
+                              )
+                            );
+                            ClearCollect(
+                              colUsers,
+                              AddColumns(
+                                colUsersWithDept,
+                                "Role",
+                                LookUp(
+                                  colRoles,
+                                  roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value
+                                ).name
+                              )
+                            );
 
-                          Set(varDeleteConfirm, false);
-                          Set(varSelectedUser, Blank());
-                          Notify("Đã xóa người dùng thành công!", NotificationType.Success)
+                            Set(varDeleteConfirm, false);
+                            Set(varSelectedUser, Blank());
+                            Notify("Đã xóa người dùng thành công!", NotificationType.Success)
+                          )
                         Size: =FontSizes.Medium
                         Text: ="Xóa"
                         Width: =Parent.Width * 0.15
@@ -1308,11 +1358,11 @@ Screens:
             BorderColor: =Colors.Border
             BorderThickness: =2
             Fill: =Colors.White
-            Height: =Parent.Height * 0.7
+            Height: =Min(Parent.Height * 0.7, 600)
             Visible: =varShowUserDetail
-            Width: =Parent.Width * 0.5
-            X: =If(varShowUserDetail, (Parent.Width - Parent.Width * 0.5) / 2, -Parent.Width * 2)
-            Y: =If(varShowUserDetail, (Parent.Height - Parent.Height * 0.7) / 2, -Parent.Height * 2)
+            Width: =Min(Parent.Width * 0.5, 800)
+            X: =If(varShowUserDetail, (Parent.Width - Min(Parent.Width * 0.5, 800)) / 2, -Parent.Width * 2)
+            Y: =If(varShowUserDetail, (Parent.Height - Min(Parent.Height * 0.7, 600)) / 2, -Parent.Height * 2)
           Children:
             - Detail.Modal.Header:
                 Control: GroupContainer
@@ -1683,5 +1733,5 @@ Screens:
                   Icon: =Icon.Sync
                   Visible: =varLoadingUsers
                   Width: =40
-                  X: =(Parent.Width - 40) / 2
-                  Y: =(Parent.Height - 40) / 2
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2

@@ -6,9 +6,9 @@ Screens:
         =// Load SharePoint data với mapping chính xác và error handling
         IfError(
           // STEP 1: Load base SharePoint tables
-          ClearCollect(colDepartmentsBase, Department_1);
-          ClearCollect(colUsersBase, User_1);
-          ClearCollect(colReportDataRaw, NamecardRequest_1);
+          ClearCollect(colDepartmentsBase, Department);
+          ClearCollect(colUsersBase, User);
+          ClearCollect(colReportDataRaw, NamecardRequest);
 
           // STEP 2: Map EmployeeName
           ClearCollect(
@@ -937,7 +937,7 @@ Screens:
                               Width: =Parent.Width * 0.12
                               X: =Parent.Width * 0.85
                               Y: =Parent.Height * 0.2
-      - Report.DataTable_1:
+      - Report.DataTable:
           Control: DataTable
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
@@ -971,7 +971,7 @@ Screens:
                   Order: =2
                   Text: =ThisItem.EmployeeName
                   Width: =150
-            - Department.Column_1:
+            - Department.Column:
                 Control: DataTableColumn
                 Variant: Textual
                 Properties:
