@@ -1,5 +1,5 @@
 Screens:
-  ReportScreen:
+  ReportScreen_1:
     Properties:
       Fill: =Colors.BackgroundLight
       OnVisible: |-
@@ -102,7 +102,7 @@ Screens:
         });
         Set(varFilteredData, colReportData);
     Children:
-      - Main.Content.Container_6:
+      - Main.Content.Container_7:
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
@@ -112,7 +112,7 @@ Screens:
             X: =Styles.Navigation.Width
             Y: =Styles.Header.Height
           Children:
-            - Report.Content.Section_2:
+            - Report.Content.Section_3:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -121,7 +121,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =323.09999999999997
                 Children:
-                  - Table.View.Container_2:
+                  - Table.View.Container_3:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -131,7 +131,7 @@ Screens:
                         Width: =Parent.Width * 0.96
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.02
-                  - Column.Chart.Container_2:
+                  - Column.Chart.Container_3:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -142,9 +142,9 @@ Screens:
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.02
                       Children:
-                        - Chart.Title_2:
+                        - Chart.Title_3:
                             Control: Label@2.5.1
-                            Group: CompositeColumnChart1_1
+                            Group: CompositeColumnChart1_2
                             Properties:
                               Align: =Align.Center
                               BorderColor: =RGBA(0, 0, 0, 1)
@@ -155,10 +155,9 @@ Screens:
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ thống kê yêu cầu thẻ tên theo trạng thái"
                               Width: =Parent.Width
-                              Y: =10.285439999999994
-                        - Status.Chart_2:
+                        - Status.Chart_3:
                             Control: BarChart@2.3.0
-                            Group: CompositeColumnChart1_1
+                            Group: CompositeColumnChart1_2
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
                               BorderStyle: =BorderStyle.None
@@ -186,36 +185,26 @@ Screens:
                                   ),
                                   Count, CountRows(StatusGroup)
                                 )
-                              Items.Labels: =StatusText
+                              Items.Labels: =StatusLabel
                               Items.Series1: =Count
-                              Items.Series2: =Count
-                              Items.Series3: =Count
-                              Items.Series4: =Count
-                              Items.Series5: =Count
-                              Items.Series6: =Count
-                              Items.Series7: =Count
-                              Items.Series8: =Count
-                              Items.Series9: =Count
                               Size: =15
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
-                        - Chart.Legend_2:
+                        - Chart.Legend_3:
                             Control: Legend@2.1.0
-                            Group: CompositeColumnChart1_1
+                            Group: CompositeColumnChart1_2
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
                               BorderStyle: =BorderStyle.None
                               Color: =RGBA(50, 49, 48, 1)
                               Font: =Font.'Segoe UI'
                               Height: =Parent.Height * 0.15
-                              ItemColorSet: ='Status.Chart_2'.ItemColorSet
-                              Items: ='Status.Chart_2'.SeriesLabels
+                              ItemColorSet: ='Status.Chart_3'.ItemColorSet
+                              Items: ='Status.Chart_3'.SeriesLabels
                               Items.Value: =Value
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
-                  - Pie.Chart.Container_2:
+                  - Pie.Chart.Container_3:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -224,11 +213,11 @@ Screens:
                         Visible: =varReportViewType = "PieChart"
                         Width: =Parent.Width * 0.96
                         X: =Parent.Width * 0.02
-                        Y: =Parent.Height * 0.02
+                        Y: =Parent.Height - Self.Height
                       Children:
-                        - Pie.Chart.Title_2:
+                        - Pie.Chart.Title_3:
                             Control: Label@2.5.1
-                            Group: CompositePieChart1_1
+                            Group: CompositePieChart1_2
                             Properties:
                               Align: =Align.Center
                               BorderColor: =RGBA(0, 0, 0, 1)
@@ -240,10 +229,10 @@ Screens:
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ tròn phân bố yêu cầu theo phòng ban"
                               Width: =Parent.Width
-                              Y: =10.285439999999994
-                        - Department.Pie.Chart_2:
+                              Y: =Parent.Height * 0.02
+                        - Department.Pie.Chart_3:
                             Control: PieChart@2.2.0
-                            Group: CompositePieChart1_1
+                            Group: CompositePieChart1_2
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
                               BorderStyle: =BorderStyle.None
@@ -264,16 +253,16 @@ Screens:
                                   DeptLabel, Department,
                                   Count, CountRows(DeptGroup)
                                 )
-                              Items.Labels: =Department
+                              Items.Labels: =DeptLabel
                               Items.Series: =Count
                               PressedBorderColor: =RGBA(0, 0, 0, 0)
                               Size: =15
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
-                        - Pie.Chart.Legend_2:
+                              Y: ='Pie.Chart.Title_3'.Y + 'Pie.Chart.Title_3'.Height + Parent.Height * 0.01
+                        - Pie.Chart.Legend_3:
                             Control: Legend@2.1.0
-                            Group: CompositePieChart1_1
+                            Group: CompositePieChart1_2
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
                               BorderStyle: =BorderStyle.None
@@ -285,15 +274,15 @@ Screens:
                               Font: =Font.'Segoe UI'
                               Height: =Parent.Height * 0.25
                               HoverBorderColor: =RGBA(0, 0, 0, 0)
-                              ItemColorSet: ='Department.Pie.Chart_2'.ItemColorSet
-                              Items: ='Department.Pie.Chart_2'.SeriesLabels
+                              ItemColorSet: ='Department.Pie.Chart_3'.ItemColorSet
+                              Items: ='Department.Pie.Chart_3'.SeriesLabels
                               Items.Value: =Value
                               PressedBorderColor: =RGBA(0, 0, 0, 0)
                               Size: =16
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
-            - Page.Header.Section_6:
+                              Y: =284.32800000000003
+            - Page.Header.Section_7:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -301,7 +290,7 @@ Screens:
                   Height: =Parent.Height * 0.12
                   Width: =Parent.Width
                 Children:
-                  - Page.Title_6:
+                  - Page.Title_7:
                       Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextPrimary
@@ -312,7 +301,7 @@ Screens:
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.15
-                  - Page.Subtitle_5:
+                  - Page.Subtitle_6:
                       Control: Label@2.5.1
                       Properties:
                         Color: =Colors.TextMuted
@@ -322,7 +311,7 @@ Screens:
                         Width: =Parent.Width * 0.4
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.5
-                  - Export.Current.Button_2:
+                  - Export.Current.Button_3:
                       Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =If(varExportingPDF, Colors.Success, Colors.Success)
@@ -345,7 +334,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width - Parent.Width * 0.35
                         Y: =Parent.Height * 0.15
-                  - Export.All.Button_2:
+                  - Export.All.Button_3:
                       Control: Classic/Button@2.2.0
                       Properties:
                         BorderColor: =If(varExportingCSV, Colors.Primary, Colors.Border)
@@ -368,7 +357,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width - Parent.Width * 0.18
                         Y: =Parent.Height * 0.15
-            - Report.Stats.Section_2:
+            - Report.Stats.Section_3:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -377,7 +366,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.12
                 Children:
-                  - Total.Requests.Card_5:
+                  - Total.Requests.Card_6:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -392,7 +381,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.02
                         Y: =Parent.Height * 0.1
-                  - Approved.Requests.Card_5:
+                  - Approved.Requests.Card_6:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -407,7 +396,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.18
                         Y: =Parent.Height * 0.1
-                  - Pending.Requests.Card_3:
+                  - Pending.Requests.Card_4:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -422,7 +411,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.34
                         Y: =Parent.Height * 0.1
-                  - Rejected.Requests.Card_5:
+                  - Rejected.Requests.Card_6:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -437,7 +426,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.5
                         Y: =Parent.Height * 0.1
-                  - Total.Cost.Card_2:
+                  - Total.Cost.Card_3:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -452,7 +441,7 @@ Screens:
                         Width: =Parent.Width * 0.16
                         X: =Parent.Width * 0.66
                         Y: =Parent.Height * 0.1
-                  - Avg.Processing.Card_2:
+                  - Avg.Processing.Card_3:
                       Control: CanvasComponent
                       ComponentName: StatsCardComponent
                       Properties:
@@ -467,7 +456,7 @@ Screens:
                         Width: =Parent.Width * 0.15
                         X: =Parent.Width * 0.83
                         Y: =Parent.Height * 0.1
-            - Filters.ViewOptions.Section_2:
+            - Filters.ViewOptions.Section_3:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -476,7 +465,7 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.3
                 Children:
-                  - Filters.Row1.Container_2:
+                  - Filters.Row1.Container_3:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -484,7 +473,7 @@ Screens:
                         Height: =Parent.Height * 0.6
                         Width: =Parent.Width
                       Children:
-                        - Filters.Title_4:
+                        - Filters.Title_5:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -495,7 +484,7 @@ Screens:
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.1
-                        - Month.Filter_2:
+                        - Month.Filter_3:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -546,7 +535,7 @@ Screens:
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.5
-                        - Year.Filter_2:
+                        - Year.Filter_3:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -594,7 +583,7 @@ Screens:
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.12
                               Y: =Parent.Height * 0.5
-                        - Department.Filter_3:
+                        - Department.Filter_4:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -643,7 +632,7 @@ Screens:
                               Width: =Parent.Width * 0.15
                               X: =Parent.Width * 0.21
                               Y: =Parent.Height * 0.5
-                        - Status.Filter_5:
+                        - Status.Filter_6:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -694,7 +683,7 @@ Screens:
                               Width: =Parent.Width * 0.12
                               X: =Parent.Width * 0.37
                               Y: =Parent.Height * 0.5
-                        - Priority.Filter_4:
+                        - Priority.Filter_5:
                             Control: DropDown@0.0.45
                             Properties:
                               BorderColor: =Colors.Border
@@ -742,7 +731,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.5
                               Y: =Parent.Height * 0.5
-                  - Filters.Row2.Container_2:
+                  - Filters.Row2.Container_3:
                       Control: GroupContainer@1.3.0
                       Variant: ManualLayout
                       Properties:
@@ -751,7 +740,7 @@ Screens:
                         Width: =Parent.Width
                         Y: =Parent.Height * 0.6
                       Children:
-                        - Date.From.Label_4:
+                        - Date.From.Label_5:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -761,7 +750,7 @@ Screens:
                               Width: =Parent.Width * 0.06
                               X: =Parent.Width * 0.03
                               Y: =Parent.Height * 0.1
-                        - Date.From.Input_4:
+                        - Date.From.Input_5:
                             Control: Classic/DatePicker@2.6.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -802,7 +791,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.09
                               Y: =Parent.Height * 0.2
-                        - Date.To.Label_4:
+                        - Date.To.Label_5:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -812,7 +801,7 @@ Screens:
                               Width: =Parent.Width * 0.06
                               X: =Parent.Width * 0.2
                               Y: =Parent.Height * 0.1
-                        - Date.To.Input_4:
+                        - Date.To.Input_5:
                             Control: Classic/DatePicker@2.6.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -853,7 +842,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.26
                               Y: =Parent.Height * 0.2
-                        - Clear.Filters.Button_4:
+                        - Clear.Filters.Button_5:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =Colors.Border
@@ -862,11 +851,11 @@ Screens:
                               Height: =Parent.Height * 0.6
                               HoverFill: =Styles.Button.Secondary.HoverFill
                               OnSelect: |
-                                =Reset('Month.Filter_2');
-                                Reset('Year.Filter_2');
-                                Reset('Department.Filter_3');
-                                Reset('Status.Filter_5');
-                                Reset('Priority.Filter_4');
+                                =Reset('Month.Filter_3');
+                                Reset('Year.Filter_3');
+                                Reset('Department.Filter_4');
+                                Reset('Status.Filter_6');
+                                Reset('Priority.Filter_5');
                                 Set(varFilterMonth, "All");
                                 Set(varFilterYear, "All");
                                 Set(varFilterDepartment, "All");
@@ -892,7 +881,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.38
                               Y: =Parent.Height * 0.2
-                        - View.Type.Label_2:
+                        - View.Type.Label_3:
                             Control: Label@2.5.1
                             Properties:
                               Color: =Colors.TextPrimary
@@ -903,7 +892,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.55
                               Y: =Parent.Height * 0.1
-                        - Table.View.Button_2:
+                        - Table.View.Button_3:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "Table", Colors.Primary, Colors.Border)
@@ -918,7 +907,7 @@ Screens:
                               Width: =Parent.Width * 0.08
                               X: =Parent.Width * 0.65
                               Y: =Parent.Height * 0.2
-                        - Chart.View.Button_2:
+                        - Chart.View.Button_3:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "ColumnChart", Colors.Primary, Colors.Border)
@@ -933,7 +922,7 @@ Screens:
                               Width: =Parent.Width * 0.1
                               X: =Parent.Width * 0.74
                               Y: =Parent.Height * 0.2
-                        - Pie.Chart.View.Button_2:
+                        - Pie.Chart.View.Button_3:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderColor: =If(varReportViewType = "PieChart", Colors.Primary, Colors.Border)
@@ -948,7 +937,7 @@ Screens:
                               Width: =Parent.Width * 0.12
                               X: =Parent.Width * 0.85
                               Y: =Parent.Height * 0.2
-      - Report.DataTable:
+      - Report.DataTable_1:
           Control: DataTable@1.0.3
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
@@ -958,13 +947,14 @@ Screens:
             HeadingColor: =Colors.White
             HeadingFill: =Colors.Primary
             HeadingFont: =Font.'Segoe UI'
-            Height: =117
+            Height: ='Pie.Chart.Container_3'.Height
             Items: =varFilteredData
-            Width: =938
-            X: =428
-            Y: =644
+            Visible: =varReportViewType = "Table"
+            Width: ='Pie.Chart.Container_3'.Width
+            X: ='Main.Content.Container_7'.X + 'Report.Content.Section_3'.X + 'Pie.Chart.Container_3'.X
+            Y: ='Main.Content.Container_7'.Y + 'Report.Content.Section_3'.Y + 'Pie.Chart.Container_3'.Y
           Children:
-            - RequestCode.Column_1:
+            - RequestCode.Column_2:
                 Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
@@ -972,7 +962,7 @@ Screens:
                   FieldName: ="RequestCode"
                   Order: =1
                   Text: =ThisItem.RequestCode
-            - Employee.Column_1:
+            - Employee.Column_2:
                 Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
@@ -981,7 +971,7 @@ Screens:
                   Order: =2
                   Text: =ThisItem.EmployeeName
                   Width: =150
-            - Department.Column:
+            - Department.Column_1:
                 Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
@@ -990,7 +980,7 @@ Screens:
                   Order: =3
                   Text: =ThisItem.Department
                   Width: =160
-            - SuggestedReason.Column_1:
+            - SuggestedReason.Column_2:
                 Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
@@ -999,7 +989,7 @@ Screens:
                   Order: =4
                   Text: =ThisItem.suggestedReason
                   Width: =120
-            - RequestDate.Column_1:
+            - RequestDate.Column_2:
                 Control: DataTableColumn@1.0.1
                 Variant: DateTime
                 Properties:
@@ -1007,7 +997,7 @@ Screens:
                   FieldName: ="Created"
                   Order: =5
                   Text: =Text(DateValue(ThisItem.Created), "dd/mm/yyyy")
-            - Status.Column_3:
+            - Status.Column_4:
                 Control: DataTableColumn@1.0.1
                 Variant: Textual
                 Properties:
@@ -1016,7 +1006,7 @@ Screens:
                   Order: =6
                   Text: =ThisItem.status.Value
                   Width: =120
-            - Quantity.Column_1:
+            - Quantity.Column_2:
                 Control: DataTableColumn@1.0.1
                 Variant: Number
                 Properties:
@@ -1025,7 +1015,7 @@ Screens:
                   Order: =7
                   Text: =Text(ThisItem.quantity)
                   Width: =80
-      - Loading.Overlay_3:
+      - Loading.Overlay_4:
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
@@ -1034,7 +1024,7 @@ Screens:
             Visible: =Or(varExportingPDF, varExportingCSV)
             Width: =Parent.Width
           Children:
-            - Loading.Container_2:
+            - Loading.Container_3:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
@@ -1043,19 +1033,19 @@ Screens:
                   Fill: =Colors.White
                   Height: =Parent.Height * 0.2
                   Width: =Parent.Width * 0.3
-                  X: =(Parent.Width - Parent.Width * 0.3) / 2
-                  Y: =(Parent.Height - Parent.Height * 0.2) / 2
+                  X: =Parent.Width * 0.35
+                  Y: =Parent.Height * 0.4
                 Children:
-                  - Loading.Spinner_3:
+                  - Loading.Spinner_4:
                       Control: Classic/Icon@2.5.0
                       Properties:
                         Color: =Colors.Primary
-                        Height: =40
+                        Height: =Parent.Height * 0.25
                         Icon: =Icon.Sync
-                        Width: =40
-                        X: =(Parent.Width - 40) / 2
+                        Width: =Parent.Height * 0.25
+                        X: =(Parent.Width - Self.Width) / 2
                         Y: =Parent.Height * 0.2
-                  - Loading.Text_2:
+                  - Loading.Text_3:
                       Control: Label@2.5.1
                       Properties:
                         Align: =Align.Center
