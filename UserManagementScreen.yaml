@@ -2,7 +2,7 @@ Screens:
   UserManagementScreen:
     Properties:
       Fill: =Colors.BackgroundLight
-      OnVisible: "=// Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
+      OnVisible: "=// Set current user email for security checks\n  Set(varCurrentUserEmail, User().Email);\n  \n  // Load SharePoint data first\n  ClearCollect(colDepartments, Department_1);\n  ClearCollect(\n    colDepartmentsWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Department_1, Value, name)\n    );\n  ClearCollect(colRoles, Role_1);\n  ClearCollect(\n    colRolesWithAll,\n    Table({Value: \"Tất cả\"}),\n    AddColumns(Role_1, Value, name)\n    );\n  ClearCollect(colUserRoles, UserRole);\n\n  ClearCollect(colUsersRaw, User_1);\n\n  ClearCollect(\n      colUsersWithDept,\n      AddColumns(\n          colUsersRaw,\n          Department,\n          LookUp(colDepartments, departmentID = ThisRecord.departmentID).name\n      )\n  );\n\n  ClearCollect(\n      colUsers,\n      AddColumns(\n          colUsersWithDept,\n          Role,\n          LookUp(\n              colRoles,\n              roleID = LookUp(colUserRoles, userID.Value = ThisRecord.userID.Value).roleID.Value\n          ).name\n      )\n  );\n    // Reset form states\n    Set(varShowUserForm, false);\n    Set(varFormMode, \"Add\");\n    Set(varEditingUser, Blank());\n    Set(varSelectedUser, Blank());\n    Set(varDeleteConfirm, false);\n    Set(varLoadingUsers, false);\n    Set(varErrorMessage, \"\");\n    Set(varShowUserDetail, false);\n    Set(varDetailFormMode, \"View\");\n    Set(varShowContextMenu, false);\n    Set(varContextMenuX, 0);\n    Set(varContextMenuY, 0);\n    // Initialize filter variables\n    Set(varSearchText, \"\");\n    Set(varSelectedDepartment, \"\");\n    Set(varSelectedRole, \"\");\n    \n    \n    // Create filtered collection\n    Set(varFilteredUsers, colUsers);\n"
     Children:
       - Main.Content.Container_3:
           Control: GroupContainer
@@ -34,26 +34,26 @@ Screens:
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.25
                   - Add.User.Button:
-                      Control: Classic/Button
-                      Properties:
-                        BorderColor: =Colors.Primary
-                        BorderThickness: =If(varLoadingUsers, 2, 1)
-                        Color: =Styles.Button.Primary.Color
-                        DisplayMode: =If(varLoadingUsers, DisplayMode.Disabled, DisplayMode.Edit)
-                        Fill: =If(varLoadingUsers, ColorFade(Styles.Button.Primary.Fill, 30%), Styles.Button.Primary.Fill)
-                        Height: =Styles.Button.Height
-                        HoverFill: =If(varLoadingUsers, Styles.Button.Primary.Fill, Styles.Button.Primary.HoverFill)
-                        OnSelect: |
-                          =Set(varLoadingUsers, true);
-                          Set(varFormMode, "Add");
-                          Set(varLoadingUsers, false);
-                          Set(varShowUserForm, true)
-                        PressedFill: =ColorFade(Styles.Button.Primary.Fill, -10%)
-                        Size: =FontSizes.Medium
-                        Text: =If(varLoadingUsers, LoadingStates.Button.Text, "+ Thêm người dùng")
-                        Width: =Parent.Width * 0.2
-                        X: =Parent.Width - Parent.Width * 0.25
-                        Y: =Parent.Height * 0.2
+                          Control: Classic/Button
+                          Properties:
+                            BorderColor: =Colors.Primary
+                            BorderThickness: =1
+                            Color: =Styles.Button.Primary.Color
+                            DisplayMode: =DisplayMode.Edit
+                            Fill: =Styles.Button.Primary.Fill
+                            Height: =Styles.Button.Height
+                            HoverFill: =Styles.Button.Primary.HoverFill
+                            OnSelect: |
+                              =Set(varFormMode, "Add");
+                              Set(varEditingUser, Blank());
+                              Reset('User.Add.Edit.Form');
+                              Set(varShowUserForm, true)
+                            PressedFill: =ColorFade(Styles.Button.Primary.Fill, -10%)
+                            Size: =FontSizes.Medium
+                            Text: ="+ Thêm người dùng"
+                            Width: =Parent.Width * 0.2
+                            X: =Parent.Width - Parent.Width * 0.25
+                            Y: =Parent.Height * 0.2
             - Users.List.Section:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -70,7 +70,7 @@ Screens:
                         BorderColor: =Colors.BorderLight
                         BorderThickness: =1
                         Fill: =Colors.White
-                        Height: =Parent.Height * 0.08
+                        Height: =If(Parent.Width < 768, Parent.Height * 0.22, Parent.Height * 0.08)
                         Width: =Parent.Width * 0.94
                         X: =Parent.Width * 0.03
                         Y: =Parent.Height * 0.02
@@ -83,12 +83,12 @@ Screens:
                               Color: =Colors.TextPrimary
                               Default: =""
                               FocusedBorderColor: =Colors.Primary
-                              Height: =Styles.Input.Height
+                              Height: =Parent.Height * 0.6
                               HintText: ="Tìm kiếm theo tên hoặc email..."
                               OnChange: |
                                 =Set(varSearchText, Self.Text)
                               Size: =FontSizes.Base
-                              Width: =Parent.Width * 0.35
+                              Width: =If(Parent.Width < 768, Parent.Width * 0.9, Parent.Width * 0.35)
                               X: =Parent.Width * 0.02
                               Y: =Parent.Height * 0.2
                         - Department.Filter_1:
@@ -97,28 +97,28 @@ Screens:
                               BorderColor: =Colors.Border
                               Default: ="Tất cả"
                               Fill: =Colors.White
-                              Height: =Styles.Input.Height
+                              Height: =Parent.Height * 0.6
                               Items: =colDepartmentsWithAll
                               Items.Value: =Value
                               OnChange: |
                                 =Set(varSelectedDepartment, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
-                              Width: =Parent.Width * 0.25
-                              X: =Parent.Width * 0.4
-                              Y: =Parent.Height * 0.2
+                              Width: =If(Parent.Width < 768, Parent.Width * 0.42, Parent.Width * 0.18)
+                              X: =If(Parent.Width < 768, Parent.Width * 0.02, Parent.Width * 0.39)
+                              Y: =If(Parent.Width < 768, Parent.Height * 1.2, Parent.Height * 0.2)
                         - Role.Filter:
                             Control: Classic/DropDown
                             Properties:
                               BorderColor: =Colors.Border
                               Default: ="Tất cả"
                               Fill: =Colors.White
-                              Height: =Styles.Input.Height
+                              Height: =Parent.Height * 0.6
                               Items: =colRolesWithAll
                               Items.Value: =Value
                               OnChange: |
                                 =Set(varSelectedRole, If(Self.Selected.Value = "Tất cả", "", Self.Selected.Value))
-                              Width: =Parent.Width * 0.15
-                              X: =Parent.Width * 0.68
-                              Y: =Parent.Height * 0.2
+                              Width: =If(Parent.Width < 768, Parent.Width * 0.42, Parent.Width * 0.15)
+                              X: =If(Parent.Width < 768, Parent.Width * 0.48, Parent.Width * 0.6)
+                              Y: =If(Parent.Width < 768, Parent.Height * 1.2, Parent.Height * 0.2)
                         - View.Selected.Button:
                             Control: Classic/Button
                             Properties:
@@ -126,40 +126,44 @@ Screens:
                               Color: =Colors.Success
                               DisplayMode: =If(IsBlank('Users.DataTable'.Selected), DisplayMode.Disabled, DisplayMode.Edit)
                               Fill: =RGBA(0, 0, 0, 0)
-                              Height: =Styles.Input.Height
+                              Height: =Parent.Height * 0.6
                               OnSelect: |
                                 =If(Not(IsBlank('Users.DataTable'.Selected)),
                                   Set(varSelectedUser, 'Users.DataTable'.Selected);
                                   Set(varShowUserDetail, true);
                                   Set(varDetailFormMode, "View")
                                 )
-                              Size: =FontSizes.Base
-                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn người dùng\", \"\U0001F441 Xem chi tiết\")"
-                              Width: =Parent.Width * 0.12
-                              X: =Parent.Width * 0.70
-                              Y: =Parent.Height * 0.2
+                              Size: =FontSizes.Small
+                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn\", \"Xem\")"
+                              Width: =If(Parent.Width < 768, Parent.Width * 0.45, Parent.Width * 0.08)
+                              X: =If(Parent.Width < 768, Parent.Width * 0.02, Parent.Width * 0.78)
+                              Y: =If(Parent.Width < 768, Parent.Height * 2.4, Parent.Height * 0.2)
                         - Delete.Selected.Button:
                             Control: Classic/Button
                             Properties:
                               BorderColor: =Colors.Error
                               Color: =Colors.Error
-                              DisplayMode: =If(Or(IsBlank('Users.DataTable'.Selected), 'Users.DataTable'.Selected.userID = User().Email), DisplayMode.Disabled, DisplayMode.Edit)
+                              DisplayMode: =If(Or(IsBlank('Users.DataTable'.Selected), 'Users.DataTable'.Selected.email = User().Email), DisplayMode.Disabled, DisplayMode.Edit)
                               Fill: =RGBA(0, 0, 0, 0)
-                              Height: =Styles.Input.Height
+                              Height: =Parent.Height * 0.6
                               OnSelect: |
-                                =If(Not(IsBlank('Users.DataTable'.Selected)),
+                                =If(
+                                  And(
+                                    Not(IsBlank('Users.DataTable'.Selected)), 
+                                    'Users.DataTable'.Selected.email <> User().Email
+                                  ),
+                                  Set(varSelectedUser, 'Users.DataTable'.Selected);
+                                  Set(varDeleteConfirm, true),
                                   If(
-                                    'Users.DataTable'.Selected.userID = User().Email,
-                                    Notify("Bạn không thể xóa tài khoản của chính mình", NotificationType.Warning),
-                                    Set(varSelectedUser, 'Users.DataTable'.Selected);
-                                    Set(varDeleteConfirm, true)
+                                    'Users.DataTable'.Selected.email = User().Email,
+                                    Notify("Không thể xóa tài khoản hiện tại của bạn", NotificationType.Warning)
                                   )
                                 )
-                              Size: =FontSizes.Base
-                              Text: "=If(IsBlank('Users.DataTable'.Selected), \"Chọn để xóa\", If('Users.DataTable'.Selected.userID = User().Email, \"\U0001F6AB Không thể xóa\", \"\U0001F5D1️ Xóa người dùng\"))"
-                              Width: =Parent.Width * 0.15
-                              X: =Parent.Width * 0.84
-                              Y: =Parent.Height * 0.2
+                              Size: =FontSizes.Small
+                              Text: ="Xóa"
+                              Width: =If(Parent.Width < 768, Parent.Width * 0.45, Parent.Width * 0.08)
+                              X: =If(Parent.Width < 768, Parent.Width * 0.5, Parent.Width * 0.88)
+                              Y: =If(Parent.Width < 768, Parent.Height * 2.4, Parent.Height * 0.2)
                   - Users.Data.Table:
                       Control: GroupContainer
                       Variant: ManualLayout
@@ -229,24 +233,24 @@ Screens:
                                     Width: =Parent.Width
                                     Y: =40
                               - Delete.Context.Button:
-                                  Control: Classic/Button
-                                  Properties:
-                                    BorderColor: =RGBA(0, 0, 0, 0)
-                                    Color: =Colors.Error
-                                    Fill: =RGBA(0, 0, 0, 0)
-                                    HoverFill: =Colors.BackgroundLight
-                                    OnSelect: |
-                                      =If(
-                                        varSelectedUser.userID = User().Email,
-                                        Notify("Bạn không thể xóa tài khoản của chính mình", NotificationType.Warning),
-                                        Set(varDeleteConfirm, true);
-                                        Set(varShowContextMenu, false)
-                                      )
-                                    Size: =FontSizes.Base
-                                    Text: "=\"\U0001F5D1 Xóa\""
-                                    Visible: =varSelectedUser.userID <> User().Email
-                                    Width: =Parent.Width
-                                    Y: =80
+                                      Control: Classic/Button
+                                      Properties:
+                                        BorderColor: =RGBA(0, 0, 0, 0)
+                                        Color: =Colors.Error
+                                        Fill: =RGBA(0, 0, 0, 0)
+                                        HoverFill: =Colors.BackgroundLight
+                                        OnSelect: |
+                                          =If(
+                                            varSelectedUser.email = User().Email,
+                                            Notify("Không thể xóa tài khoản hiện tại của bạn", NotificationType.Warning),
+                                            Set(varDeleteConfirm, true);
+                                            Set(varShowContextMenu, false)
+                                          )
+                                        Size: =FontSizes.Base
+                                        Text: "=\"\U0001F5D1 Xóa\""
+                                        Visible: =varSelectedUser.email <> User().Email
+                                        Width: =Parent.Width
+                                        Y: =80
       - Users.DataTable:
           Control: DataTable
           Properties:
@@ -369,20 +373,25 @@ Screens:
                         Text: =If(varFormMode = "Add", "Thêm người dùng mới", "Chỉnh sửa thông tin người dùng")
                         Width: =Parent.Width * 0.8
                         X: =Parent.Width * 0.04
+                        Y: =Parent.Height * 0.04
                   - Modal.Close.Button_1:
-                      Control: Classic/Button
-                      Properties:
-                        BorderColor: =Colors.White
-                        Color: =Colors.White
-                        Fill: =RGBA(0, 0, 0, 0)
-                        Height: =Parent.Height * 0.6
-                        OnSelect: |
-                          =Set(varShowUserForm, false)
-                        Size: =FontSizes.Large
-                        Text: ="×"
-                        Width: =Parent.Height * 0.6
-                        X: =Parent.Width * 0.9
-                        Y: =Parent.Height * 0.2
+                          Control: Classic/Button
+                          Properties:
+                            BorderColor: =Colors.White
+                            Color: =Colors.White
+                            Fill: =RGBA(0, 0, 0, 0)
+                            Height: =Parent.Height * 0.6
+                            OnSelect: |
+                              =Set(varShowUserForm, false);
+                              Reset('User.Add.Edit.Form');
+                              Set(varFormMode, "Add");
+                              Set(varEditingUser, Blank());
+                              Set(varErrorMessage, "")
+                            Size: =FontSizes.Large
+                            Text: ="×"
+                            Width: =Parent.Height * 0.6
+                            X: =Parent.Width * 0.9
+                            Y: =Parent.Height * 0.2
             - Form.Content_1:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -734,34 +743,30 @@ Screens:
                                   Control: Classic/ComboBox
                                   MetadataKey: FieldValue
                                   Properties:
-                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
-                                    ChevronBackground: =RGBA(245, 245, 245, 1)
-                                    ChevronDisabledBackground: =RGBA(242, 242, 241, 0)
-                                    ChevronDisabledFill: =RGBA(161, 159, 157, 1)
-                                    ChevronFill: =RGBA(50, 49, 48, 1)
-                                    ChevronHoverBackground: =RGBA(245, 245, 245, 1)
-                                    ChevronHoverFill: =RGBA(50, 49, 48, 1)
-                                    Color: =RGBA(50, 49, 48, 1)
+                                    BorderColor: =If(IsBlank(Self.Selected), RGBA(245, 245, 245, 1), RGBA(0, 118, 184, 1))
+                                    BorderStyle: =BorderStyle.Solid
+                                    BorderThickness: =1
+                                    Color: =RGBA(76, 75, 74, 1)
                                     DefaultSelectedItems: =If(varFormMode = "Edit", [Parent.Default], [First(Department_1)])
-                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
-                                    DisabledColor: =RGBA(161, 159, 157, 1)
-                                    DisabledFill: =RGBA(242, 242, 241, 0)
                                     DisplayFields: =["name"]
                                     DisplayMode: =Parent.DisplayMode
-                                    Fill: =RGBA(245, 245, 245, 1)
                                     Font: =Font.'Segoe UI'
-                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
-                                    HoverColor: =RGBA(50, 49, 48, 1)
-                                    HoverFill: =RGBA(245, 245, 245, 1)
+                                    FontWeight: =FontWeight.Normal
+                                    Height: =40
+                                    HoverBorderColor: =RGBA(0, 118, 184, 1)
+                                    HoverFill: =RGBA(245, 245, 245, 0.4)
+                                    InputTextPlaceholder: ="Chọn phòng ban"
                                     Items: =Department_1
-                                    PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
-                                    PressedBorderColor: =RGBA(16, 110, 190, 1)
-                                    PressedColor: =RGBA(255, 255, 255, 1)
-                                    PressedFill: =RGBA(0, 120, 212, 1)
+                                    PaddingLeft: =10
+                                    PaddingRight: =10
+                                    PressedBorderColor: =RGBA(0, 118, 184, 1)
+                                    PressedFill: =RGBA(245, 245, 245, 0.8)
+                                    Reset: =Parent.Reset
                                     SearchFields: =["name"]
+                                    SelectionColor: =RGBA(0, 118, 184, 0.2)
                                     SelectMultiple: =false
-                                    SelectionColor: =RGBA(255, 255, 255, 1)
-                                    SelectionFill: =RGBA(0, 120, 212, 1)
+                                    Size: =FontSizes.Medium
+                                    TabIndex: =Parent.TabIndex
                                     Tooltip: =Parent.DisplayName
                                     Width: =Parent.Width - 60
                                     X: =30
@@ -1077,34 +1082,30 @@ Screens:
                                   Control: Classic/ComboBox
                                   MetadataKey: FieldValue
                                   Properties:
-                                    BorderColor: =If(IsBlank(Parent.Error), Parent.BorderColor, Color.Red)
-                                    ChevronBackground: =RGBA(245, 245, 245, 1)
-                                    ChevronDisabledBackground: =RGBA(242, 242, 241, 0)
-                                    ChevronDisabledFill: =RGBA(161, 159, 157, 1)
-                                    ChevronFill: =RGBA(50, 49, 48, 1)
-                                    ChevronHoverBackground: =RGBA(245, 245, 245, 1)
-                                    ChevronHoverFill: =RGBA(50, 49, 48, 1)
-                                    Color: =RGBA(50, 49, 48, 1)
+                                    BorderColor: =If(IsBlank(Self.Selected), RGBA(245, 245, 245, 1), RGBA(0, 118, 184, 1))
+                                    BorderStyle: =BorderStyle.Solid
+                                    BorderThickness: =1
+                                    Color: =RGBA(76, 75, 74, 1)
                                     DefaultSelectedItems: =If(varFormMode = "Edit", [Parent.Default], [First(Role_1)])
-                                    DisabledBorderColor: =RGBA(0, 0, 0, 0)
-                                    DisabledColor: =RGBA(161, 159, 157, 1)
-                                    DisabledFill: =RGBA(242, 242, 241, 0)
                                     DisplayFields: =["name"]
                                     DisplayMode: =Parent.DisplayMode
-                                    Fill: =RGBA(245, 245, 245, 1)
                                     Font: =Font.'Segoe UI'
-                                    HoverBorderColor: =RGBA(16, 110, 190, 1)
-                                    HoverColor: =RGBA(50, 49, 48, 1)
-                                    HoverFill: =RGBA(245, 245, 245, 1)
+                                    FontWeight: =FontWeight.Normal
+                                    Height: =40
+                                    HoverBorderColor: =RGBA(0, 118, 184, 1)
+                                    HoverFill: =RGBA(245, 245, 245, 0.4)
+                                    InputTextPlaceholder: ="Chọn vai trò"
                                     Items: =Role_1
-                                    PaddingLeft: =If(Self.DisplayMode = DisplayMode.Edit, 5, 0)
-                                    PressedBorderColor: =RGBA(16, 110, 190, 1)
-                                    PressedColor: =RGBA(255, 255, 255, 1)
-                                    PressedFill: =RGBA(0, 120, 212, 1)
+                                    PaddingLeft: =10
+                                    PaddingRight: =10
+                                    PressedBorderColor: =RGBA(0, 118, 184, 1)
+                                    PressedFill: =RGBA(245, 245, 245, 0.8)
+                                    Reset: =Parent.Reset
                                     SearchFields: =["name"]
+                                    SelectionColor: =RGBA(0, 118, 184, 0.2)
                                     SelectMultiple: =false
-                                    SelectionColor: =RGBA(255, 255, 255, 1)
-                                    SelectionFill: =RGBA(0, 120, 212, 1)
+                                    Size: =FontSizes.Medium
+                                    TabIndex: =Parent.TabIndex
                                     Tooltip: =Parent.DisplayName
                                     Width: =Parent.Width - 60
                                     X: =30
@@ -1166,52 +1167,55 @@ Screens:
                   Width: =Parent.Width
                   Y: =Parent.Height * 0.88
                 Children:
-                  - Cancel.Button_1:
-                      Control: Classic/Button
-                      Properties:
-                        BorderColor: =Colors.Border
-                        Color: =Styles.Button.Secondary.Color
-                        Fill: =Styles.Button.Secondary.Fill
-                        Height: =Styles.Button.Height
-                        HoverFill: =Styles.Button.Secondary.HoverFill
-                        OnSelect: |-
-                          =ResetForm('User.Add.Edit.Form');
-                          Set(varShowUserForm, false)
-                        Size: =FontSizes.Medium
-                        Text: ="Hủy"
-                        Width: =Parent.Width * 0.15
-                        X: =Parent.Width * 0.55
-                        Y: =Parent.Height * 0.2
-                  - Save.Button_1:
-                      Control: Classic/Button
-                      Properties:
-                        BorderColor: =Colors.Primary
-                        Color: =Styles.Button.Primary.Color
-                        DisplayMode: =If('User.Add.Edit.Form'.Valid, DisplayMode.Edit, DisplayMode.Disabled)
-                        Fill: =Styles.Button.Primary.Fill
-                        Height: =Styles.Button.Height
-                        HoverFill: =Styles.Button.Primary.HoverFill
-                        OnSelect: |-
-                          =// Validate required fields before submission
-                          If(
-                            And(
-                              Not(IsBlank(DataCardValue1.Text)),
-                              Not(IsBlank(DataCardValue2.Text)),
-                              Not(IsBlank(DataCardValue3.Selected)),
-                              Not(IsBlank(DataCardValue4.Text)),
-                              Not(IsBlank(DataCardValue5.Text)),
-                              Not(IsBlank(DataCardValue6.Selected))
-                            ),
-                            // All fields valid, submit form
-                            SubmitForm('User.Add.Edit.Form'),
-                            // Show validation error
-                            Notify("Vui lòng điền đầy đủ thông tin bắt buộc", NotificationType.Warning)
-                          )
-                        Size: =FontSizes.Medium
-                        Text: =If(varFormMode = "Add", "Thêm người dùng", "Cập nhật")
-                        Width: =150
-                        X: =Parent.Width * 0.75
-                        Y: =Parent.Height * 0.2
+                      - Cancel.Button_1:
+                          Control: Classic/Button
+                          Properties:
+                            BorderColor: =Colors.Border
+                            Color: =Styles.Button.Secondary.Color
+                            Fill: =Styles.Button.Secondary.Fill
+                            Height: =Styles.Button.Height
+                            HoverFill: =Styles.Button.Secondary.HoverFill
+                            OnSelect: |-
+                              =Reset('User.Add.Edit.Form');
+                              Set(varShowUserForm, false);
+                              Set(varFormMode, "Add");
+                              Set(varEditingUser, Blank());
+                              Set(varErrorMessage, "")
+                            Size: =FontSizes.Medium
+                            Text: ="Hủy"
+                            Width: =Parent.Width * 0.15
+                            X: =Parent.Width * 0.55
+                            Y: =Parent.Height * 0.2
+                      - Save.Button_1:
+                          Control: Classic/Button
+                          Properties:
+                            BorderColor: =Colors.Primary
+                            Color: =Styles.Button.Primary.Color
+                            DisplayMode: =If('User.Add.Edit.Form'.Valid, DisplayMode.Edit, DisplayMode.Disabled)
+                            Fill: =Styles.Button.Primary.Fill
+                            Height: =Styles.Button.Height
+                            HoverFill: =Styles.Button.Primary.HoverFill
+                            OnSelect: |-
+                              =// Validate required fields before submission
+                              If(
+                                And(
+                                  Not(IsBlank(DataCardValue1.Text)),
+                                  Not(IsBlank(DataCardValue2.Text)),
+                                  Not(IsBlank(DataCardValue3.Selected)),
+                                  Not(IsBlank(DataCardValue4.Text)),
+                                  Not(IsBlank(DataCardValue5.Text)),
+                                  Not(IsBlank(DataCardValue6.Selected))
+                                ),
+                                // All fields valid, submit form
+                                SubmitForm('User.Add.Edit.Form'),
+                                // Show validation error
+                                Notify("Vui lòng điền đầy đủ thông tin bắt buộc", NotificationType.Warning)
+                              )
+                            Size: =FontSizes.Medium
+                            Text: =If(varFormMode = "Add", "Thêm người dùng", "Cập nhật")
+                            Width: =150
+                            X: =Parent.Width * 0.75
+                            Y: =Parent.Height * 0.2
       - Delete.Modal.Overlay:
           Control: Rectangle
           Properties:
@@ -1303,13 +1307,13 @@ Screens:
                         HoverFill: =Styles.Button.Danger.HoverFill
                         OnSelect: |
                           =If(
-                            varSelectedUser.userID = User().Email,
-                            Notify("Không thể xóa tài khoản của chính bạn", NotificationType.Error),
+                            varSelectedUser.email = User().Email,
+                            Notify("Không thể xóa tài khoản hiện tại của bạn", NotificationType.Error),
                             // Delete from SharePoint User_1
-                            Remove(User_1, LookUp(User_1, userID = varSelectedUser.userID));
+                            Remove(User_1, LookUp(User_1, email = varSelectedUser.email));
 
                             // Remove from UserRole table
-                            RemoveIf(UserRole, userID.Value = varSelectedUser.userID);
+                            RemoveIf(UserRole, userID.Value = varSelectedUser.email);
 
                             // Update collections
                             ClearCollect(colUsersRaw, User_1);
