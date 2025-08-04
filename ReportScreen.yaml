@@ -119,7 +119,7 @@ Screens:
                   Fill: =Colors.BackgroundLight
                   Height: =Parent.Height * 0.55
                   Width: =Parent.Width
-                  Y: =323.09999999999997
+                  Y: =Parent.Height * 0.45
                 Children:
                   - Table.View.Container_2:
                       Control: GroupContainer
@@ -155,9 +155,9 @@ Screens:
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ thống kê yêu cầu thẻ tên theo trạng thái"
                               Width: =Parent.Width
-                              Y: =10.285439999999994
+                              Y: =Parent.Height * 0.02
                         - Status.Chart_2:
-                            Control: BarChart@2.3.0
+                            Control: BarChart
                             Group: CompositeColumnChart1_1
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
@@ -199,9 +199,9 @@ Screens:
                               Size: =15
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
+                              Y: =Chart.Title_2.Y + Chart.Title_2.Height + Parent.Height * 0.01
                         - Chart.Legend_2:
-                            Control: Legend@2.1.0
+                            Control: Legend
                             Group: CompositeColumnChart1_1
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
@@ -214,7 +214,7 @@ Screens:
                               Items.Value: =Value
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
+                              Y: =Status.Chart_2.Y + Status.Chart_2.Height + Parent.Height * 0.01
                   - Pie.Chart.Container_2:
                       Control: GroupContainer
                       Variant: ManualLayout
@@ -240,9 +240,9 @@ Screens:
                               Size: =FontSizes.Medium
                               Text: ="Biểu đồ tròn phân bố yêu cầu theo phòng ban"
                               Width: =Parent.Width
-                              Y: =10.285439999999994
+                              Y: =Parent.Height * 0.02
                         - Department.Pie.Chart_2:
-                            Control: PieChart@2.2.0
+                            Control: PieChart
                             Group: CompositePieChart1_1
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
@@ -270,9 +270,9 @@ Screens:
                               Size: =15
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
+                              Y: =Pie.Chart.Title_2.Y + Pie.Chart.Title_2.Height + Parent.Height * 0.01
                         - Pie.Chart.Legend_2:
-                            Control: Legend@2.1.0
+                            Control: Legend
                             Group: CompositePieChart1_1
                             Properties:
                               BorderColor: =RGBA(0, 0, 0, 0)
@@ -292,7 +292,7 @@ Screens:
                               Size: =16
                               Width: =Parent.Width * 0.9
                               X: =Parent.Width * 0.05
-                              Y: =10.285439999999994
+                              Y: =Department.Pie.Chart_2.Y + Department.Pie.Chart_2.Height + Parent.Height * 0.01
             - Page.Header.Section_6:
                 Control: GroupContainer
                 Variant: ManualLayout
@@ -747,7 +747,7 @@ Screens:
                       Variant: ManualLayout
                       Properties:
                         Fill: =Colors.White
-                        Height: =43.07999999999999
+                        Height: =Parent.Height * 0.4
                         Width: =Parent.Width
                         Y: =Parent.Height * 0.6
                       Children:
@@ -958,11 +958,12 @@ Screens:
             HeadingColor: =Colors.White
             HeadingFill: =Colors.Primary
             HeadingFont: =Font.'Segoe UI'
-            Height: =117
+            Height: =Parent.Height * 0.35
             Items: =varFilteredData
-            Width: =938
-            X: =428
-            Y: =644
+            Visible: =varReportViewType = "Table"
+            Width: =Parent.Width * 0.96
+            X: =Parent.Width * 0.02
+            Y: =Report.Content.Section_2.Y + Report.Content.Section_2.Height * 0.1
           Children:
             - RequestCode.Column_1:
                 Control: DataTableColumn
@@ -980,7 +981,7 @@ Screens:
                   FieldName: ="EmployeeName"
                   Order: =2
                   Text: =ThisItem.EmployeeName
-                  Width: =150
+                  Width: =Parent.Width * 0.18
             - Department.Column:
                 Control: DataTableColumn
                 Variant: Textual
@@ -989,7 +990,7 @@ Screens:
                   FieldName: ="Department"
                   Order: =3
                   Text: =ThisItem.Department
-                  Width: =160
+                  Width: =Parent.Width * 0.2
             - SuggestedReason.Column_1:
                 Control: DataTableColumn
                 Variant: Textual
@@ -998,7 +999,7 @@ Screens:
                   FieldName: ="suggestedReason"
                   Order: =4
                   Text: =ThisItem.suggestedReason
-                  Width: =120
+                  Width: =Parent.Width * 0.15
             - RequestDate.Column_1:
                 Control: DataTableColumn
                 Variant: DateTime
@@ -1015,7 +1016,7 @@ Screens:
                   FieldName: ="status"
                   Order: =6
                   Text: =ThisItem.status.Value
-                  Width: =120
+                  Width: =Parent.Width * 0.15
             - Quantity.Column_1:
                 Control: DataTableColumn
                 Variant: Number
@@ -1024,7 +1025,7 @@ Screens:
                   FieldName: ="quantity"
                   Order: =7
                   Text: =Text(ThisItem.quantity)
-                  Width: =80
+                  Width: =Parent.Width * 0.1
       - Loading.Overlay_3:
           Control: GroupContainer
           Variant: ManualLayout
@@ -1043,17 +1044,17 @@ Screens:
                   Fill: =Colors.White
                   Height: =Parent.Height * 0.2
                   Width: =Parent.Width * 0.3
-                  X: =(Parent.Width - Parent.Width * 0.3) / 2
-                  Y: =(Parent.Height - Parent.Height * 0.2) / 2
+                  X: =Parent.Width * 0.35
+                  Y: =Parent.Height * 0.4
                 Children:
                   - Loading.Spinner_3:
                       Control: Classic/Icon
                       Properties:
                         Color: =Colors.Primary
-                        Height: =40
+                        Height: =Parent.Height * 0.25
                         Icon: =Icon.Sync
-                        Width: =40
-                        X: =(Parent.Width - 40) / 2
+                        Width: =Parent.Height * 0.25
+                        X: =(Parent.Width - Self.Width) / 2
                         Y: =Parent.Height * 0.2
                   - Loading.Text_2:
                       Control: Label
